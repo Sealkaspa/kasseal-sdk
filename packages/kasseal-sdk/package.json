@@ -1,0 +1,76 @@
+{
+  "name": "@kassealhq/sdk",
+  "version": "0.1.0",
+  "description": "Quotes, transaction builders, launch-proof verification and wallet adapters for Kasseal tokens on Kaspa.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "kaspa",
+    "kasseal",
+    "kcc-20",
+    "bonding-curve",
+    "amm",
+    "covenant"
+  ],
+  "homepage": "https://github.com/Sealkaspa/kasseal-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sealkaspa/kasseal-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sealkaspa/kasseal-sdk/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
+    "./web": {
+      "types": "./dist/web.d.ts",
+      "default": "./dist/web.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES",
+    "README.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "STABILITY.md",
+    "docs/api.md",
+    "docs/concepts.md",
+    "docs/contract-artifacts.md",
+    "docs/dex-and-routers.md",
+    "docs/errors.md",
+    "docs/explorers.md",
+    "docs/launch-proof.md",
+    "docs/trading-bots.md",
+    "docs/wallets.md",
+    "examples/"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "gen": "node scripts/build.mjs --gen-only",
+    "typecheck": "node scripts/build.mjs --gen-only && tsc -p tsconfig.json && tsc -p tsconfig.web.json",
+    "test": "node scripts/build.mjs && node --test test/*.test.mjs",
+    "release:check": "node scripts/release-check.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "esbuild-wasm": "0.28.2",
+    "rollup": "4.63.5",
+    "rollup-plugin-dts": "6.5.1",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,282 @@
+{
+ "note": "Reduced copy of the frozen build manifest: the fields the SDK build reads, for the compiled artifacts in this directory (every digest and template hash unchanged).",
+ "set": "kasseal-curve",
+ "version": "v1",
+ "revision": "kasseal-mainnet-2",
+ "frozen": "2026-10-20",
+ "network": "mainnet",
+ "compiler": {
+  "name": "silverc",
+  "tag": "v1.0.0",
+  "commit": "3ed973335b59269293564805cc2c58a14595ec03"
+ },
+ "treasuryAddress": "kaspa:qrt0p8sd5g8k383mzxgqtyl7ehkdez8ds8cpxqcuwjdaayke9rjhg9pqnr3zx",
+ "treasurySpk": "000020d6f09e0da20f689e3b11900593fecdecdc88ed81f013031c749bde92d928e574ac",
+ "poolH": "92acd761504e4fa05acf70675ef1aea0c66efa2126ec5c726e4779b8aef054e0",
+ "presets": {
+  "standard": {
+   "templateHash": "63f032f087bbc2b66e0f2561b1f40a6319c80f9792743c7e77e5761d41f51f5f",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k122": {
+   "templateHash": "81776a87bd0d070c6d61b8efc56ff890e118c0a92fb069eee83a8eaa26f65096",
+   "bytecodeBytes": 7977
+  },
+  "standard-lot10k-k134": {
+   "templateHash": "1c8c397f54b586ed1d0c7c8adfad74b9aae0ccbb54ad38630723a16598e07802",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k147": {
+   "templateHash": "5d55d50bf35fae5def76500490a41482f392de204ecc29081297d05b76279aab",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k161": {
+   "templateHash": "3532d348f4dec1da35a955c7c6be792a482105f0dd4135be0143cad9a881866e",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k177": {
+   "templateHash": "8c90fa1940510f78f01666ee940a56575f50734a24c625f316972ef4944b9029",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k195": {
+   "templateHash": "07ed5ea760ba1f4960418039adcce53505a8194fcd1872e2de9cf7abb214c33b",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k214": {
+   "templateHash": "3dd3836b1179206f8ca214d51c23710216c0849adb95c480bb70374ad6428dbc",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k235": {
+   "templateHash": "231c2159de46492146adcff5e1e38df8bb010dece5743be00d695e57ffeccc56",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k258": {
+   "templateHash": "3b9e3c5b88c60a059182498be5bdae65485e636a2d18ef5b11393ad54a35819a",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k284": {
+   "templateHash": "8cf87a41a3e0dfbb117971eb17cea01d4ca93c2db8510973ade25e33309e6e82",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k313": {
+   "templateHash": "4096fd3ff11071e6c17a36a8956d8bbfc5700b2f0623ebec99dc82609231cbdc",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k344": {
+   "templateHash": "135750ffc03972405b7dfefc67a755305e96b4c915e9708b64668e04134e8eda",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k379": {
+   "templateHash": "a1dd4eebf6cc99d7dd84520c5b2bc460a491c51237a794bd9beb363dde92d29f",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k417": {
+   "templateHash": "cfd48c1c756b5f992f127a42ccc6e3e50d19181bbdaf4cf0fd1198f2523463b7",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k459": {
+   "templateHash": "d87362e57417e706f48d045cbe7c89e957e2b61831c4edcc9adc0f1717490aa3",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k506": {
+   "templateHash": "11ef0ba994a43bf67bfb922f0497c82ec51bdff2d58b8debb8447c7c0305c672",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k557": {
+   "templateHash": "0fdda861a1731e3d59e3b54c9c1b024e1c48edf4f883677a8d632ff6233bcc92",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k613": {
+   "templateHash": "fa3862e2467ecc49607595cb6b19b8dee89300f051fc415874c728a6d3c4ebd9",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k675": {
+   "templateHash": "a57afb1b0e0b8ca6a761ff155df15fca14eddd68a06239e521b294d8d5ef5cd3",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k744": {
+   "templateHash": "472169d09d362ac955e2dd95590edbfb8e36d28172346789ce3a415c69084e50",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k820": {
+   "templateHash": "f55cd57f7b3c99d923c5954ac32544228920800d0fef97c10564d69fb80864b5",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k904": {
+   "templateHash": "00c63dadf3d39f402d9ba2404beac113447aaeaa47069bbff324d0e93e57685c",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k996": {
+   "templateHash": "f67a808cd2a10a00d2e28c82583675bcfceb7279eb6366d4bd98bbb5bba05c95",
+   "bytecodeBytes": 7995
+  },
+  "standard-lot10k-k1097": {
+   "templateHash": "f57d8808578b4c32aa9cbf0c58b29c0a06014a1a7bd7ef763098a14307382b46",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k1209": {
+   "templateHash": "416f1fc7559f2b2d50ece009af191fd483990815e03e9198b6152e5ae8210657",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k1332": {
+   "templateHash": "9b9b09bf5999e86a68490728be7b8543be575043be78d2d3055011e0589a6038",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k1468": {
+   "templateHash": "f042dd4d19ec70c94ec34d440fc4f80c0870b57cea948e73d2e4e605cf56881d",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k1618": {
+   "templateHash": "8a78f3adb37965041347a3dd637a7fc772ec224c9e9b9b30a86683f4068497af",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k1783": {
+   "templateHash": "5102485705c9cee3043362cb1745c9cc6ff72bb15602879cc2a6e1986a9db8ad",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k1965": {
+   "templateHash": "ec63b54f0902a647358bb6c50af14e5fd9b366f2d75d75fc33ad5362e488e7b9",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k2166": {
+   "templateHash": "d4bc4e1ae34815c47b9618b9ee936f51ad38eef4a43658154d27a51f44d0c781",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k2387": {
+   "templateHash": "8e447589cf917dd7758aa48eb2970a6a8ae898a58ae39f446e77dac128bfd581",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k2631": {
+   "templateHash": "aa5b39e2a2509430a501881479cdf8224905ef8462d555a9f6dc75511980aae7",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k2900": {
+   "templateHash": "a3e82290d97d22fd0094c19c20f3e393988d4d3090e2c8558a65611153b2ca9c",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k3197": {
+   "templateHash": "e435c425d0fceb2b631575b10099043019166edd9f05c7884adc22c08b57aee5",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k3524": {
+   "templateHash": "e6764b6fed7e72685ef654efb836b6222423d8caccf2f8cf89442dbdbbcde9a8",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k3885": {
+   "templateHash": "9fe40f7b3a38ef0ea1683a436b920ff04b1b0103c89bb833a0ae05ed68177685",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k4283": {
+   "templateHash": "f4877bd7b933ca74379cf478d4a13d000319be8ea3d35f72d45900e8c1d9ae67",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k4722": {
+   "templateHash": "733e4627604d5e63de49b12b41390a9f46eae76c603f617e246eadf693b10418",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k5205": {
+   "templateHash": "fcf8c7e1209eee04f0e6b87570452826fdd15d6101c84d01f31ea96454fb177b",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k5738": {
+   "templateHash": "7887d57fa7dc77508b1fdfd4defca3ea1b9c8981ea88606b6c25e8b1994d2b34",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k6326": {
+   "templateHash": "051fb5b6c1a64910e21ef1530bdcf56ca496c544ab629a8e9b5f84b39b3dcfd9",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k6974": {
+   "templateHash": "046579e2f751f215aec7f89209afb789f61647235932dfd0db3e6b5aafd7f458",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k7688": {
+   "templateHash": "e02e6fe80b6c1c1d9336ed5e8b3fe2a99e52a467302036ae39e2cfb875224b29",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k8475": {
+   "templateHash": "3958a7e5b4c45933861ae19f10b74e1041a30e80799951026bd8102427a4594e",
+   "bytecodeBytes": 8008
+  },
+  "standard-lot10k-k9343": {
+   "templateHash": "51b76eeae6e031cceb3f70682cebad4f23d74da4f30219f88d0a76f648f62336",
+   "bytecodeBytes": 8008
+  },
+  "standard-k103": {
+   "templateHash": "99f4b03048adae1281c959cc3e08799c4a8926be67fe0e783d3eb9f0f22b04d5",
+   "bytecodeBytes": 7977
+  },
+  "standard-k113": {
+   "templateHash": "78a2aa6f280ce9b6329d8a8c172f0dbff83fb32e72f4ff3b427ec759cfa1bb9a",
+   "bytecodeBytes": 7990
+  },
+  "standard-k124": {
+   "templateHash": "eb0b9ccb9a7f365425548ace55c3eecd85dc2ead732134e73f72c84c379cc89e",
+   "bytecodeBytes": 7990
+  },
+  "standard-k136": {
+   "templateHash": "9fe3087ca102d0944abde60b8f43d929c94963b91c2eed4060dbc3c950c2bd7a",
+   "bytecodeBytes": 8008
+  },
+  "standard-k164": {
+   "templateHash": "b561b9576250c2aad24c513845a7626804de24d3bcecaf811509374daba4d3d1",
+   "bytecodeBytes": 8008
+  },
+  "standard-k180": {
+   "templateHash": "0f7202636a8a2e2dd4b220b40efbd68d3382ec45fa541c6d63e5f3a2e98f424d",
+   "bytecodeBytes": 8008
+  },
+  "standard-k198": {
+   "templateHash": "450dcf4f6595835685246ddf9d4a21e3c98fc20e31e7d3a8bbd2901d71e52c3c",
+   "bytecodeBytes": 8008
+  },
+  "standard-k218": {
+   "templateHash": "3254b43422f6553964709a95f4b0b7299e26ccf0d7713ce3b2e0fd270532e235",
+   "bytecodeBytes": 8008
+  },
+  "standard-k240": {
+   "templateHash": "79fad128a4cd1199c1a0cfa6e9555c6128329fd664f3e7eb04335be1bfbef017",
+   "bytecodeBytes": 8008
+  },
+  "standard-k264": {
+   "templateHash": "cf74df28cce3c19922b59a278289f1430d9ef3393686d7bfeb54cb69e84a2f47",
+   "bytecodeBytes": 8008
+  },
+  "standard-k291": {
+   "templateHash": "3b2c887ce4b8bc53f33ee082ad0d6fb3443c0c7b2bb7d6fed3398d63baf1ceb0",
+   "bytecodeBytes": 8008
+  },
+  "standard-k320": {
+   "templateHash": "6493c27471d12663104230f69276305e1a5c16285a94941b8b4772457ab7e517",
+   "bytecodeBytes": 8008
+  },
+  "standard-k352": {
+   "templateHash": "e2d1796b8274e7a7f59813ec4a57efe5a8b54efd82ff8bfa4578f78f72d2c773",
+   "bytecodeBytes": 8008
+  },
+  "standard-k388": {
+   "templateHash": "6b0dc5c9d6a58be64f426cea85f4beb86bfe6876b744762ed7e1683277baf21c",
+   "bytecodeBytes": 8008
+  },
+  "standard-k427": {
+   "templateHash": "0d76faae8b462a9388abae8540264127c3c31cb7d31f75259e93238fe6e316bf",
+   "bytecodeBytes": 8008
+  },
+  "standard-k470": {
+   "templateHash": "4fc34a29b17a7ee83777345c262213522938faff558d202847096220e2f6ab10",
+   "bytecodeBytes": 8008
+  },
+  "standard-k518": {
+   "templateHash": "630c865af745bb6d8e2fa28ed098e7221ea09b1b92653d98eeba7c85e7a52fd4",
+   "bytecodeBytes": 8008
+  },
+  "standard-k571": {
+   "templateHash": "72356a7e111e5e0c5f8f61aa491ee635900deb4237e63d9f27c7db3d0e7ed389",
+   "bytecodeBytes": 8008
+  },
+  "standard-k629": {
+   "templateHash": "25335ce66ac3e6f2cc54b4dfe746810e0bb9c88157a4385d2334b37f4875b275",
+   "bytecodeBytes": 8008
+  }
+ }
+}

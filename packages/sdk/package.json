@@ -1,0 +1,14 @@
+{
+  "name": "@kasseal/sdk",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Vendored, checksum-pinned rusty-kaspa v2.1.0 WASM SDK (nodejs + web builds).",
+  "exports": {
+    ".": "./src/load.mjs",
+    "./vendor/*": "./vendor/*"
+  },
+  "scripts": {
+    "verify": "node -e \"import('./src/load.mjs').then(m => console.log(m.verifyVendor()))\""
+  }
+}

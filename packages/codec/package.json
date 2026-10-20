@@ -1,0 +1,8 @@
+{
+  "name": "@kasseal/codec",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Encoding of Kasseal cell states, programs and the KCC-20 token, and the hashes they use.",
+  "exports": { ".": "./src/index.ts" }
+}

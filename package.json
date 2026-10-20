@@ -1,0 +1,15 @@
+{
+  "name": "kasseal-sdk-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "pnpm --filter @kassealhq/sdk run build",
+    "typecheck": "pnpm --filter @kassealhq/sdk run typecheck",
+    "test": "pnpm --filter @kassealhq/sdk run test",
+    "release:check": "pnpm --filter @kassealhq/sdk run release:check"
+  }
+}

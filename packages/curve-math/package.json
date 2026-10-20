@@ -1,0 +1,8 @@
+{
+  "name": "@kasseal/curve-math",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Exact bigint arithmetic for the Kasseal lot curve, graduation economics and the constant-product pool.",
+  "exports": { ".": "./src/index.ts" }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@kasseal/txbuilder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Transaction builder for the Kasseal lineages (token, curve, pool): programs, sigscripts, mass model, trades, liquidity, fee claims and submission.",
+  "exports": {
+    "./node": "./src/index.node.ts"
+  },
+  "dependencies": {
+    "@kasseal/codec": "workspace:*",
+    "@kasseal/curve-math": "workspace:*",
+    "@kasseal/sdk": "workspace:*"
+  }
+}

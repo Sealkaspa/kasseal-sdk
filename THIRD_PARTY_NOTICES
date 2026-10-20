@@ -1,0 +1,65 @@
+Third-party components in this repository
+==========================================
+
+The notices below are those of the published package (@kassealhq/sdk). In this repository the files are at:
+
+  - Kaspa WASM SDK (rusty-kaspa) v2.1.0: packages/sdk/vendor/nodejs/kaspa/*, packages/sdk/vendor/web/kaspa/*
+    (copied into the package as dist/kaspa/nodejs/* and dist/kaspa/web/*)
+  - KCC-20 reference program: packages/codec/fixtures/argent-kcc20-reference-c8a0871.json
+    (copied into the package as dist/artifacts/codec/fixtures/argent-kcc20-reference-c8a0871.json)
+
+Third-party components bundled with @kassealhq/sdk
+===================================================
+
+1. Kaspa WASM SDK (rusty-kaspa) v2.1.0
+   Files:   dist/kaspa/nodejs/*, dist/kaspa/web/* (unmodified release builds)
+   Source:  https://github.com/kaspanet/rusty-kaspa/releases/tag/v2.1.0
+            asset kaspa-wasm32-sdk-v2.1.0.zip
+            (sha256 ba674e109ff5dd8bedc4dc2ee8a5ecdf4b600b1178a541d77888ec58310b6124,
+            measured at download; upstream publishes no checksum)
+   Licence: ISC (the full text is also in dist/kaspa/nodejs/LICENSE and dist/kaspa/web/LICENSE)
+
+   ISC License
+
+   Copyright (c) 2022-2024 Kaspa developers
+
+   Permission to use, copy, modify, and distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+2. KCC-20 reference program (argent-lang/kcc20-reference) at c8a0871
+   Files:   dist/artifacts/codec/fixtures/argent-kcc20-reference-c8a0871.json
+            (the compiled reference token program and its template hash, from
+            fixtures/public-mint/artifact.json; no source code is included)
+   Source:  https://github.com/argent-lang/kcc20-reference/tree/c8a0871
+   Licence: ISC, as declared in the project's Cargo.toml ("license = ISC").
+            No LICENSE file accompanied the copy this was taken from; the
+            licence is recorded here as the manifest declares it, pending
+            confirmation with the upstream project.
+
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+3. Kasseal contract artifacts (dist/artifacts/contracts/**)
+   Compiled with silverc v1.0.0 (kaspanet/silverscript, ISC). The compiler is
+   not bundled; only its output is (no contract source code is included).
+   The artifacts are provided for verification and for use with the Kasseal
+   protocol, under the same MIT terms as the rest of this package (see
+   LICENSE).

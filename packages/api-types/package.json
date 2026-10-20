@@ -1,0 +1,11 @@
+{
+  "name": "@kasseal/api-types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Types of the Kasseal public API: launchpad domain types and the data-provider interface. No dependencies.",
+  "exports": {
+    "./provider": "./src/provider.ts",
+    "./types": "./src/types.ts"
+  }
+}
