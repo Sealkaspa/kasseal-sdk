@@ -1,10 +1,15 @@
 # Kasseal SDK
 
+[![npm](https://img.shields.io/npm/v/@kassealhq/sdk)](https://www.npmjs.com/package/@kassealhq/sdk)
+[![sdk-release](https://github.com/Sealkaspa/kasseal-sdk/actions/workflows/sdk-release.yml/badge.svg?branch=main)](https://github.com/Sealkaspa/kasseal-sdk/actions/workflows/sdk-release.yml)
+[![license: MIT](https://img.shields.io/npm/l/@kassealhq/sdk)](LICENSE)
+
 Source of [`@kassealhq/sdk`](https://www.npmjs.com/package/@kassealhq/sdk), the TypeScript SDK for **Kasseal**, the
 KCC-20 token launchpad on Kaspa L1: quotes, transaction builders for curve trades, pool swaps and liquidity, fee
 payouts, launch-proof verification, submission helpers and wallet adapters.
 
-To use the SDK, install it from npm and read the package documentation:
+To use the SDK, install it from npm and read the package documentation. Every release is published from this
+repository's workflow with npm provenance, which links the package to the exact commit and build:
 
 ```sh
 npm install @kassealhq/sdk
