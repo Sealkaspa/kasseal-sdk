@@ -31,7 +31,10 @@
  *
  *   getAccounts      -> string[]; never opens a window, [] when this origin is not connected
  *                       (`restore`: the connection comes back on page load without a popup; any
- *                       error means "not restored", and the user connects with a click)
+ *                       error means "not restored", and the user connects with a click; the key
+ *                       comes from the address, never from `getPublicKey`, which opens Unlock
+ *                       when the wallet is locked)
+ *   switchNetwork    { network } -> the network; one approval window (`switchNetwork`)
  *   disconnect       -> true; removes this origin's permission (best effort in `disconnect`;
  *                       the adapter forgets the account whatever the answer)
  *   signMessage      { message, address } -> { address, publicKey, signedMessage, signature }:
@@ -220,18 +223,33 @@ export class KaspireAdapter implements WalletAdapter {
   }
 
   /**
-   * The account this origin is already approved for, without a popup (`getAccounts`); `null` when there is none.
-   * Throws like `connect` when that account is on another network or its key does not match.
+   * The account this origin is already approved for, without a popup (`getAccounts`, `getNetwork`); `null` when there
+   * is none. Throws like `connect` when that account is on another network or is not a valid address.
+   *
+   * It never calls `getPublicKey`: Kaspire opens its "Unlock Kaspire" window for that method when the wallet is
+   * auto-locked, so a page load (or an account-change event) would open a window. The x-only key is the one the P2PK
+   * address commits to (`xOnlyKeyOfAddress`); every signature is verified against it before anything is sent
+   * (`finalize` with `signer`, and `signMessage` compares the key Kaspire reports), so a wallet that signs with
+   * another key is refused at signing time instead.
    */
   async restore(): Promise<WalletAccount | null> {
     const provider = this.#provider();
     if (provider === undefined) return null;
     const accounts = await this.#call(provider, 'getAccounts');
     if (!Array.isArray(accounts) || accounts.length === 0 || typeof accounts[0] !== 'string') return null;
-    return this.#establish(provider, accounts[0]);
+    return this.#establish(provider, accounts[0], false);
   }
 
-  async #establish(provider: KaspireProvider, address: string): Promise<WalletAccount> {
+  /**
+   * Ask Kaspire to switch to the adapter's network (`switchNetwork({ network })`, one approval window; none when it is
+   * already there). The account is re-read by the caller afterwards (`restore`).
+   */
+  async switchNetwork(): Promise<void> {
+    const provider = this.#requireProvider();
+    await this.#call(provider, 'switchNetwork', { network: this.network });
+  }
+
+  async #establish(provider: KaspireProvider, address: string, checkKey = true): Promise<WalletAccount> {
     // Subscribed before the network check, so a switch to the right network after a mismatch is heard.
     this.#subscribe(provider);
     await this.#assertNetwork(provider);
@@ -242,15 +260,18 @@ export class KaspireAdapter implements WalletAdapter {
       throw new WalletAccountMismatch(`wallet account ${address} is not a valid address: ${(e as AddressError).message}`);
     }
     if (decoded.prefix !== addressPrefixOf(this.network)) throw new WalletAccountMismatch(`wallet account ${address} is not a ${this.network} address`);
-    const key = await this.#call(provider, 'getPublicKey');
-    if (typeof key !== 'string' || !/^[0-9a-fA-F]{64}$/.test(key)) throw new WalletAccountMismatch(`getPublicKey returned ${JSON.stringify(key)}, expected a 32-byte x-only key`);
     let expected: string;
     try {
       expected = toHex(xOnlyKeyOfAddress(address));
     } catch (e) {
       throw new WalletAccountMismatch(`wallet account ${address}: ${(e as Error).message}`);
     }
-    if (key.toLowerCase() !== expected) throw new WalletAccountMismatch(`getPublicKey ${key} is not the key of ${address}`);
+    if (checkKey) {
+      // A click (`connect`): the wallet's own key is compared with the address's (the wallet is unlocked by then).
+      const key = await this.#call(provider, 'getPublicKey');
+      if (typeof key !== 'string' || !/^[0-9a-fA-F]{64}$/.test(key)) throw new WalletAccountMismatch(`getPublicKey returned ${JSON.stringify(key)}, expected a 32-byte x-only key`);
+      if (key.toLowerCase() !== expected) throw new WalletAccountMismatch(`getPublicKey ${key} is not the key of ${address}`);
+    }
     this.#account = { address, publicKey: expected, network: this.network };
     return this.#account;
   }

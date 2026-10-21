@@ -12,7 +12,8 @@
  * src/background/controller/provider/controller.ts):
  *
  *   requestAccounts()  -> string[]                       popup on first use
- *   getAccounts()      -> string[]; [] when this origin is not connected (no popup)
+ *   getAccounts()      -> string[] (a lone string is accepted too); [] when this origin is not connected (no popup)
+ *   switchNetwork(name) -> one approval window, none when already on that network
  *   getNetwork()       -> "kaspa_mainnet" | "kaspa_testnet_10" | "kaspa_testnet_11" | "kaspa_testnet_12"
  *                         | "kaspa_devnet", or "" when not connected; mapped to the network id
  *                         ("testnet-10") and asserted
@@ -62,6 +63,7 @@ export interface KasWareProvider {
   requestAccounts(): Promise<unknown>;
   getAccounts?(): Promise<unknown>;
   getNetwork(): Promise<unknown>;
+  switchNetwork?(network: string): Promise<unknown>;
   getPublicKey(): Promise<unknown>;
   signPskt(params: KasWareSignPsktParams): Promise<unknown>;
   signMessage?(text: string, params?: { readonly type?: 'auto' | 'schnorr' | 'ecdsa'; readonly noAuxRand?: boolean }): Promise<unknown>;
@@ -211,9 +213,22 @@ export class KasWareAdapter implements WalletAdapter {
   async restore(): Promise<WalletAccount | null> {
     const provider = this.#provider();
     if (provider === undefined || typeof provider.getAccounts !== 'function') return null;
-    const accounts = await this.#call('getAccounts', () => provider.getAccounts!());
+    const answer = await this.#call('getAccounts', () => provider.getAccounts!());
+    // Documented as `string`, shown as `string[]` in KasWare's own example: both are read.
+    const accounts = typeof answer === 'string' ? (answer === '' ? [] : [answer]) : answer;
     if (!Array.isArray(accounts) || accounts.length === 0 || typeof accounts[0] !== 'string') return null;
     return this.#establish(provider, accounts[0]);
+  }
+
+  /**
+   * Ask KasWare to switch to the adapter's network (`switchNetwork('kaspa_testnet_10' | 'kaspa_mainnet')`, one approval
+   * window, none when it is already there). Throws `KasWareError` 4200 when this
+   * KasWare has no `switchNetwork` (its mobile app disables it).
+   */
+  async switchNetwork(): Promise<void> {
+    const provider = this.#requireProvider();
+    if (typeof provider.switchNetwork !== 'function') throw new KasWareError('switchNetwork', 4200, 'this KasWare has no switchNetwork');
+    await this.#call('switchNetwork', () => provider.switchNetwork!(kasWareNetworkOf(this.network)));
   }
 
   async #establish(provider: KasWareProvider, address: string): Promise<WalletAccount> {

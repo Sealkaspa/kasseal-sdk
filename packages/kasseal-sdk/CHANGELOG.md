@@ -29,7 +29,9 @@ The first public release.
   bounded.
 - Launch-proof verification (nine steps, `verifyLaunchProofJson`), and the graduation check against the public Kaspa
   API (`graduationOnChain`).
-- Submission helpers: transaction status, a retry policy that never trades twice, fee-bump replacement.
-- Wallet adapters for KasWare, Kastle and Kaspire.
+- Submission helpers: transaction status, a retry policy that never trades twice (its time budget pauses while a
+  wallet window is open), fee-bump replacement.
+- Wallet adapters for KasWare, Kastle and Kaspire. KasWare and Kaspire can ask the wallet to switch network
+  (`switchNetwork`), and Kaspire reconnects on page load without opening its unlock window.
 - Typed errors with stable codes.
 - API types for the public Kasseal REST API, and `createApiSources`, the builder's UTXO sources over that API.

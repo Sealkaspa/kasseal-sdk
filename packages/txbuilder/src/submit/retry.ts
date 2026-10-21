@@ -11,7 +11,8 @@
  *                after `lost-race/orphan` re-read the head immediately (it already moved)
  *   silence      a winner not seen within 3 s, or our own transaction not heard of for 3 s,
  *                leads to a re-read or a `GET /v1/tx/:txid`
- *   budget       15 s of automatic retries from the first click, then "Busy curve"
+ *   budget       15 s of automatic retries from the first click, then "Busy curve"; the time a
+ *                wallet window is open (`pause`/`resume`) does not count
  *   builder bugs `fee-too-low` and `budget-too-low` are retried once each with the node's number
  *                (neither was seen in 9,151 testnet-10 submissions), then surfaced
  *   never        `script-failed` (a require failed) and anything unclassified are surfaced at once;
@@ -90,6 +91,9 @@ export class RetryPolicy {
   #feeRetries = 0;
   #budgetRetries = 0;
   #rereads = 0;
+  /** Time the budget was paused (a wallet window open), ms; and when the current pause began. */
+  #pausedMs = 0;
+  #pausedAt: number | undefined;
 
   constructor(clock: Clock, random: Random = Math.random, config: RetryPolicyConfig = RETRY_POLICY) {
     if (!(config.backoffMinMs >= 0 && config.backoffMaxMs >= config.backoffMinMs && config.budgetMs > 0 && config.silenceMs > 0)) throw new RetryPolicyError('invalid retry policy configuration');
@@ -109,8 +113,33 @@ export class RetryPolicy {
     return this.#startedAt;
   }
 
+  /**
+   * When automatic retries stop: the budget after the first click, plus every span the budget was paused (a wallet
+   * window open, `pause`/`resume`), plus the running pause.
+   */
   get deadline(): number {
-    return this.startedAt + this.config.budgetMs;
+    const running = this.#pausedAt === undefined ? 0 : Math.max(0, this.#clock.now() - this.#pausedAt);
+    return this.startedAt + this.config.budgetMs + this.#pausedMs + running;
+  }
+
+  /**
+   * Stop the budget clock: the time a person spends in a wallet window reading and approving does not count against the
+   * automatic retries. Idempotent while paused.
+   */
+  pause(): void {
+    if (this.#pausedAt === undefined) this.#pausedAt = this.#clock.now();
+  }
+
+  /** Start the budget clock again after `pause`; the paused span is added to the deadline. */
+  resume(): void {
+    if (this.#pausedAt === undefined) return;
+    this.#pausedMs += Math.max(0, this.#clock.now() - this.#pausedAt);
+    this.#pausedAt = undefined;
+  }
+
+  /** Total paused time so far (ms), the running pause included. */
+  get pausedMs(): number {
+    return this.#pausedMs + (this.#pausedAt === undefined ? 0 : Math.max(0, this.#clock.now() - this.#pausedAt));
   }
 
   /** Re-reads of the head so far (one per rebuild after a lost race). */
@@ -301,6 +330,15 @@ export async function runSubmission(fx: SubmissionEffects, config: RetryPolicyCo
   let signed: BuiltTx | undefined;
   const report = (s: SubmitState): void => fx.onState?.(s, signed ?? built);
   const finish = (outcome: SubmissionResult['outcome']): SubmissionResult => ({ outcome, built: signed ?? built, submissions, rebuilds, elapsedMs: fx.clock.now() - policy.startedAt });
+  /** A step that waits on a person (the wallet window, a re-quote consent): the budget clock is paused meanwhile. */
+  const person = async <T>(step: () => Promise<T>): Promise<T> => {
+    policy.pause();
+    try {
+      return await step();
+    } finally {
+      policy.resume();
+    }
+  };
 
   let action: RetryAction = { kind: 'reread', at: fx.clock.now() };
   for (;;) {
@@ -316,12 +354,12 @@ export async function runSubmission(fx: SubmissionEffects, config: RetryPolicyCo
         if (built !== undefined) rebuilds++;
         built = await fx.build(hint);
         report({ kind: 'built' });
-        if (rebuilds > 0 && fx.approve !== undefined && !(await fx.approve(built, rebuilds))) {
+        if (rebuilds > 0 && fx.approve !== undefined && !(await person(() => fx.approve!(built!, rebuilds)))) {
           const state: SubmitState = { kind: 'failed', reason: 'price moved beyond the accepted slippage' };
           report(state);
           return finish({ kind: 'give-up', reason: 'failed', state });
         }
-        signed = await fx.sign(built);
+        signed = await person(() => fx.sign(built!));
         report({ kind: 'signed' });
         action = await submitOnce(signed);
         break;
@@ -333,7 +371,7 @@ export async function runSubmission(fx: SubmissionEffects, config: RetryPolicyCo
           if (built !== undefined) rebuilds++;
           built = await fx.build(hint);
           report({ kind: 'built' });
-          signed = await fx.sign(built);
+          signed = await person(() => fx.sign(built!));
           report({ kind: 'signed' });
           action = await submitOnce(signed);
           break;
