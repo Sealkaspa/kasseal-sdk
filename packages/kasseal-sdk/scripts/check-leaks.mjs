@@ -5,7 +5,7 @@
 //   - the repository: every file of this repository (sources, tests, scripts, docs, workflow, data), except
 //     dependencies, build output and this scanner itself (its rule table and planted self-test strings).
 // Usage: check-leaks.mjs [unpacked package dir] (default: pack now) | check-leaks.mjs --repo
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
@@ -17,12 +17,14 @@ const BINARY = /\.(wasm|png|jpg|gif|ico|woff2?|tgz)$/;
 
 /**
  * Words that must never ship but cannot be listed here without publishing them (names, private project names, wording
- * of unreleased features): read from the JSON file named by LEAK_RULES_FILE, an array of [name, source, flags]. The
+ * of unreleased features): read from the JSON file named by LEAK_RULES_FILE (default: private-leak-rules.json beside this script), an array of [name, source, flags]. The
  * file is kept outside this repository; the publisher runs the scan with it before every release. Without it only the
  * rules below apply. An optional fourth field `prose` limits a rule to prose, as COMMENT_RULES.
  */
 const PRIVATE = (() => {
-  const file = process.env.LEAK_RULES_FILE;
+  // Default: private-leak-rules.json beside this script, present only in the publisher's copy (ignored by git here).
+  const local = path.join(path.dirname(new URL(import.meta.url).pathname), 'private-leak-rules.json');
+  const file = process.env.LEAK_RULES_FILE ?? (existsSync(local) ? local : undefined);
   if (!file) return [];
   return JSON.parse(readFileSync(file, 'utf8')).map(([name, source, flags, scope]) => ({ rule: [name, new RegExp(source, flags)], prose: scope === 'prose' }));
 })();
@@ -203,6 +205,8 @@ export const REPO = path.resolve(PKG, '..', '..');
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'generated']);
 /** This scanner: its rule table and planted self-test strings are leaks by design. */
 const SELF = 'packages/kasseal-sdk/scripts/check-leaks.mjs';
+/** The private word list itself (git-ignored here); it holds exactly the words the scan looks for. */
+const PRIVATE_LIST = 'packages/kasseal-sdk/scripts/private-leak-rules.json';
 
 function repoFiles(root, rel = '') {
   const out = [];
@@ -210,7 +214,7 @@ function repoFiles(root, rel = '') {
     const r = rel === '' ? name : `${rel}/${name}`;
     if (statSync(path.join(root, r)).isDirectory()) {
       if (!SKIP_DIRS.has(name)) out.push(...repoFiles(root, r));
-    } else if (r !== SELF && !/\.tgz$/.test(name)) {
+    } else if (r !== SELF && r !== PRIVATE_LIST && !/\.tgz$/.test(name)) {
       out.push(r);
     }
   }

@@ -4,3 +4,6 @@ src/generated/
 *.tgz
 *.log
 .DS_Store
+
+# The publisher's private leak-scan word list (never committed)
+packages/kasseal-sdk/scripts/private-leak-rules.json
