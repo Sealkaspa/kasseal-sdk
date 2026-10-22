@@ -5,7 +5,9 @@ name: sdk-release
 #            checks, leak scans of the tarball and the repository, byte parity with the builder from source, tests).
 #            No secrets.
 #   publish  only on a pushed tag `sdk-v<version>` matching the package version: the same checks, then
-#            `npm publish --provenance --access public` with the NPM_TOKEN secret, in the `npm` environment.
+#            `npm stage publish --access public` through npm trusted publishing (OIDC, the `npm` environment; no
+#            stored token, provenance added by npm). A staged version goes live only when a maintainer approves it
+#            with 2FA on npmjs.com (or `npm stage approve`); CI can stage, never publish directly.
 # Every action is pinned by commit SHA.
 
 on:
@@ -57,7 +59,7 @@ jobs:
     environment: npm
     permissions:
       contents: read
-      id-token: write   # npm provenance
+      id-token: write   # npm trusted publishing (OIDC) and provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -84,8 +86,9 @@ jobs:
           fi
       - name: Release checks (builds dist/)
         run: pnpm --filter @kassealhq/sdk run release:check
-      - name: Publish
+      # Trusted publishing needs npm 11.5.1 or later and `npm stage publish` a later 11.x; Node 22.23 ships npm 10.
+      - name: npm 11 for trusted publishing
+        run: npm install -g npm@11
+      - name: Stage the release (approve it on npmjs.com with 2FA)
         working-directory: packages/kasseal-sdk
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public
+        run: npm stage publish --access public
