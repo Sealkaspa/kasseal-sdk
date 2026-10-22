@@ -58,6 +58,7 @@ export const ALLOW = [
   ['kaspa.org hostname', /./, /^(api|api-tn10)\.kaspa\.org$/i, 'the public Kaspa REST API'],
   ['hostname', /./, /^(app\.kasseal\.com|kasseal\.com|(api|api-tn10)\.kaspa\.org)(\/|$)/i, 'the public Kasseal and Kaspa API hosts'],
   ['hostname', /./, /^github\.com\/(Sealkaspa|kaspanet|argent-lang|BLAKE3-team|forbole|kasware-wallet)$/i, 'this repository and the public upstream projects it names'],
+  ['hostname', /^README\.md$/, /^img\.shields\.io\//i, 'the README badges (npm version, licence) from the public shields.io service'],
   ['hostname', /./, /^raw\.githubusercontent\.com\/argent-lang$/i, 'the KCC-20 reference fixture\'s source'],
   ['hostname', /./, /^((www|registry|docs)\.)?npmjs\.(com|org)(\/|$)/i, 'the npm registry'],
   ['hostname', /./, /^(docs\.kasware\.xyz|semver\.org)(\/|$)/i, 'public wallet and versioning documentation'],
