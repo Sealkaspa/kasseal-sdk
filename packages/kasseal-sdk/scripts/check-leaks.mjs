@@ -15,8 +15,24 @@ const require = createRequire(import.meta.url);
 
 const BINARY = /\.(wasm|png|jpg|gif|ico|woff2?|tgz)$/;
 
+/**
+ * Words that must never ship but cannot be listed here without publishing them (names, private project names, wording
+ * of unreleased features): read from the JSON file named by LEAK_RULES_FILE, an array of [name, source, flags]. The
+ * file is kept outside this repository; the publisher runs the scan with it before every release. Without it only the
+ * rules below apply. An optional fourth field `prose` limits a rule to prose, as COMMENT_RULES.
+ */
+const PRIVATE = (() => {
+  const file = process.env.LEAK_RULES_FILE;
+  if (!file) return [];
+  return JSON.parse(readFileSync(file, 'utf8')).map(([name, source, flags, scope]) => ({ rule: [name, new RegExp(source, flags)], prose: scope === 'prose' }));
+})();
+/** Private rules for all text, and those (scope `prose`) that apply only to prose like COMMENT_RULES. */
+const PRIVATE_RULES = PRIVATE.filter((r) => !r.prose).map((r) => r.rule);
+const PRIVATE_PROSE_RULES = PRIVATE.filter((r) => r.prose).map((r) => r.rule);
+
 /** [name, pattern] pairs that apply to all text; every match fails the check unless an allowance below covers it. */
 export const RULES = [
+  ...PRIVATE_RULES,
   ['audit or decision id', /\b[A-Z]{1,4}[0-9]?-[0-9]{1,3}[a-z]?\b|\b[A-Z]{2}-[A-Z][0-9]{1,2}\b/g],
   ['owner note', /owner (decision|20[0-9]{2})|owner 20/gi],
   ['internal doc path', /docs\/(audit|plan)|\baudit\/|research\//g],
@@ -40,6 +56,7 @@ export const RULES = [
  * code), never built output.
  */
 export const COMMENT_RULES = [
+  ...PRIVATE_PROSE_RULES,
   ['build nickname', /\b[Bb]uild [A-Z]\b|\b[Tt]wins?\b|\bTWIN\b/g],
   ['short audit id', /\b[SG][0-9]{1,2}\b(?![-.][0-9])/g],
 ];
