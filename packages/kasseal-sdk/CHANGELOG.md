@@ -2,6 +2,15 @@
 
 All notable changes to `@kassealhq/sdk`. The versioning rules are in [STABILITY.md](STABILITY.md).
 
+## 0.1.1
+
+Kasseal is live on Kaspa mainnet.
+
+- `API_BASE_URLS` now lists mainnet, `https://app.kasseal.com/v1`. Testnet-10 moved to
+  `https://testnet.kasseal.com/v1`; the old testnet address now serves mainnet, so update a testnet integration that
+  hard-coded it.
+- The examples and docs use the new addresses. No change to the contract builds, the builders or the API types.
+
 ## 0.1.0
 
 The first public release.

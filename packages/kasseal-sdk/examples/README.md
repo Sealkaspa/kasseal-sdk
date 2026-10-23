@@ -1,6 +1,6 @@
 # Examples
 
-Small TypeScript programs against **testnet-10** and the public API at `https://app.kasseal.com/v1`. They are not
+Small TypeScript programs against **testnet-10** and the public API at `https://testnet.kasseal.com/v1`. They are not
 run in CI. Use a testnet-10 wallet with test KAS only; never a mainnet key.
 
 Run them with Node 22.6 or later (`node --experimental-strip-types examples/<file>.ts`) or any TypeScript runner.

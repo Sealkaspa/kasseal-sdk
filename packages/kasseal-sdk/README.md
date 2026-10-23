@@ -115,8 +115,8 @@ The complete program, with the safe retry, is [examples/pool-buy.ts](examples/po
 
 | Network | Network id | API base URL | Contract build | Status |
 |---|---|---|---|---|
-| Kaspa testnet-10 | `testnet-10` | `https://app.kasseal.com/v1` | `v1-kasseal-mainnet-2-tn10` | Live |
-| Kaspa mainnet | `mainnet` | Announced at launch | `v1-kasseal-mainnet-2` | Not live yet |
+| Kaspa mainnet | `mainnet` | `https://app.kasseal.com/v1` | `v1-kasseal-mainnet-2` | Live |
+| Kaspa testnet-10 | `testnet-10` | `https://testnet.kasseal.com/v1` | `v1-kasseal-mainnet-2-tn10` | Live |
 
 The testnet build mirrors the mainnet build: the same contract sources, with Kasseal's testnet wallet as the fee
 recipient. Template hashes for both are in [docs/contract-artifacts.md](docs/contract-artifacts.md).

@@ -28,8 +28,8 @@ test('the Node entry exports the public surface and leaves out launch, batch and
     assert.equal(m[name], undefined, name);
   }
   assert.deepEqual([...m.SUPPORTED_BUILDS], ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10']);
-  assert.equal(m.API_BASE_URLS['testnet-10'], 'https://app.kasseal.com/v1');
-  assert.equal(m.API_BASE_URLS.mainnet, undefined, 'no hidden mainnet default');
+  assert.equal(m.API_BASE_URLS.mainnet, 'https://app.kasseal.com/v1');
+  assert.equal(m.API_BASE_URLS['testnet-10'], 'https://testnet.kasseal.com/v1');
 });
 
 test('the root entry loads no WASM and installs no artifacts', () => {

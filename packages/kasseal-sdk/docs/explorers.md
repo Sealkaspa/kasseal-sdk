@@ -24,7 +24,7 @@ Kasseal's fee recipient (the treasury) on testnet-10:
 
 ## 2. Enumerating every Kasseal covenant
 
-From the public API (testnet-10: `https://app.kasseal.com/v1`; no key needed):
+From the public API (mainnet: `https://app.kasseal.com/v1`, testnet-10: `https://testnet.kasseal.com/v1`; no key needed):
 
 1. `GET /tokens?limit=50`, following `nextCursor`: every token id T, with `phase` (`bonding`, `graduated`, `listed`)
    and its metadata.
@@ -33,7 +33,7 @@ From the public API (testnet-10: `https://app.kasseal.com/v1`; no key needed):
    yourself with the SDK ([launch-proof.md](launch-proof.md)).
 3. For each P: `GET /pools/{P}/cell`: `state.lpCovId` is L (all zeros until the pool is set up).
 
-New launches arrive live on the stream (`wss://app.kasseal.com/v1/stream`, `{"op":"sub","ch":"tape"}`), or re-poll
+New launches arrive live on the stream (`wss://app.kasseal.com/v1/stream` on mainnet, `{"op":"sub","ch":"tape"}`), or re-poll
 `GET /tokens?sort=new` every minute.
 
 ## 3. Recognising Kasseal programs from chain data alone

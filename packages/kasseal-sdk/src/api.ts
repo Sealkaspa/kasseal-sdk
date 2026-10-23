@@ -38,7 +38,7 @@ export class HeadMoving extends Error {
 
 /** Options of `createApiSources`. */
 export interface ApiSourcesOptions {
-  /** The API base URL, for example `https://app.kasseal.com/v1` on testnet-10. There is no default. */
+  /** The API base URL, for example `https://app.kasseal.com/v1` on mainnet. There is no default. */
   readonly baseUrl: string;
   /** `mainnet` or `testnet-10`: funding is only read for addresses of this network. */
   readonly network: KassealNetwork;

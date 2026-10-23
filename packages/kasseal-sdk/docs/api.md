@@ -6,8 +6,8 @@ types mirror it.
 
 | Network | Base URL | Stream |
 |---|---|---|
-| testnet-10 | `https://app.kasseal.com/v1` | `wss://app.kasseal.com/v1/stream` |
-| mainnet | Announced at launch | Announced at launch |
+| mainnet | `https://app.kasseal.com/v1` | `wss://app.kasseal.com/v1/stream` |
+| testnet-10 | `https://testnet.kasseal.com/v1` | `wss://testnet.kasseal.com/v1/stream` |
 
 The SDK never assumes a base URL: pass it explicitly.
 

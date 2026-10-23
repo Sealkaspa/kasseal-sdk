@@ -19,12 +19,10 @@ export const BUILD_OF_NETWORK: Readonly<Record<KassealNetwork, string>> = Object
 /** The contract builds bundled with this package. */
 export const SUPPORTED_BUILDS: readonly string[] = Object.freeze([BUILD_OF_NETWORK.mainnet, BUILD_OF_NETWORK['testnet-10']]);
 
-/**
- * Public API base URLs. There is no default: pass the base URL of the network you use explicitly. The mainnet URL is
- * announced at launch.
- */
+/** Public API base URLs. There is no default: pass the base URL of the network you use explicitly. */
 export const API_BASE_URLS: Readonly<Partial<Record<KassealNetwork, string>>> = Object.freeze({
-  'testnet-10': 'https://app.kasseal.com/v1',
+  mainnet: 'https://app.kasseal.com/v1',
+  'testnet-10': 'https://testnet.kasseal.com/v1',
 });
 
 /** A network id this package does not build for. */

@@ -8,7 +8,7 @@
 import { ApiError, outpointKey, type BuiltTx, type FundingUtxo, type KassealNetwork } from '@kassealhq/sdk';
 
 export const NETWORK: KassealNetwork = 'testnet-10';
-export const API_BASE = 'https://app.kasseal.com/v1';
+export const API_BASE = 'https://testnet.kasseal.com/v1';
 
 /* -------------------------------------------------------------------------- */
 /* HTTP                                                                        */

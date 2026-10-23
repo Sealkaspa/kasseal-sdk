@@ -25,7 +25,7 @@ browser wallet with the SDK's adapters.
 
 ### Routes
 
-All under the API base URL (testnet-10: `https://app.kasseal.com/v1`). Public, read-only, no key.
+All under the API base URL (mainnet: `https://app.kasseal.com/v1`, testnet-10: `https://testnet.kasseal.com/v1`). Public, read-only, no key.
 
 | Route | Returns |
 |---|---|
@@ -87,7 +87,7 @@ anything you display as verified.
   extension background requests with host permissions are not affected. Ask Kasseal to allow your web origin if you
   call the API from a web page.
 - **Live updates.** Polling `GET /tokens?sort=new` every 30 to 60 seconds is enough for a wallet. The stream
-  (`wss://app.kasseal.com/v1/stream` on testnet-10) pushes trades and launches; a page that sends an `Origin` header
+  (`wss://app.kasseal.com/v1/stream` on mainnet, `wss://testnet.kasseal.com/v1/stream` on testnet-10) pushes trades and launches; a page that sends an `Origin` header
   is refused unless that origin is allowed.
 - **Signed messages.** The only API writes a wallet is ever asked to sign for are Kasseal's own app actions
   (sign-in, terms, comments, follows). Their messages name the site, so a signature made for another site does not
