@@ -72,7 +72,7 @@ Kasseal does not operate:
 ```ts
 import { graduationOnChain, launchProofFromJson, verifyLaunchProofJson } from '@kassealhq/sdk/node';
 
-const network = 'testnet-10';
+const network = 'mainnet';                         // testnet-10: https://testnet.kasseal.com/v1
 const json = await (await fetch(`https://app.kasseal.com/v1/tokens/${tokenId}/launch-proof`)).json();
 
 // Steps 1 to 9, against the SDK's own reference token program and the curve programs of the network's bundled build.
