@@ -52,7 +52,9 @@ compromised user device or key.
   did not sign for it.
 - A way to make the SDK build, or ask a user to sign, a transaction other than the one it showed.
 - A way to make the launch-proof verifier report `bound` for a token, curve or pool that is not genuine.
-- A way to make the SDK accept artifacts or a WASM build that do not match their pinned hashes.
+- A way to make the SDK accept artifacts or a WASM build that do not match their pinned hashes, or a Kaspa SDK passed
+  to `initWeb` (`kaspa` option) that builds, serialises or signs differently from the pinned build and still passes
+  the known-answer test.
 
 ## Supported versions
 

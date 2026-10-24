@@ -14,7 +14,7 @@ export {
   type KassealNetwork, type PublicTxBuilder, type TxBuilderOptions,
 } from './networks.ts';
 export {
-  ArtifactIntegrityError, SdkIntegrityError, artifactManifest, artifactPathsOfBuild, kaspaSdkDigests, type ArtifactBuildInfo, type ArtifactManifest,
+  ArtifactIntegrityError, SdkCompatibilityError, SdkIntegrityError, artifactManifest, artifactPathsOfBuild, kaspaSdkDigests, type ArtifactBuildInfo, type ArtifactManifest,
 } from './integrity.ts';
 export { curveBasesOf, referenceTokenSuffix, verifyLaunchProofJson, type LaunchProofReport } from './proof.ts';
 export {

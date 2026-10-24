@@ -34,6 +34,8 @@ ESM only. Node 22 or later, or any modern browser through a bundler. No runtime 
 | `@kassealhq/sdk` | Pure logic: quotes, slippage, state codecs, launch-proof format, API types | None |
 | `@kassealhq/sdk/node` | Everything, in Node: builders, signing, launch-proof verification | Loads the pinned Kaspa WASM SDK and the contract artifacts, each checked against its SHA-256 first |
 | `@kassealhq/sdk/web` | Everything, in the browser | None until you call `initWeb`, which checks the WASM and the artifacts the same way |
+| `@kassealhq/sdk/web/mainnet` | The same as `/web`, for mainnet only: bundles only the mainnet contract build | As `/web` |
+| `@kassealhq/sdk/web/testnet-10` | The same as `/web`, for testnet-10 only: bundles only the testnet-10 contract build | As `/web` |
 
 The SDK bundles rusty-kaspa's WASM SDK v2.1.0 and the compiled Kasseal contracts. Both are checked against pinned
 SHA-256 hashes when they load. On any difference the SDK refuses to start (it fails closed).
@@ -153,9 +155,61 @@ await ensurePresetArtifacts('standard-k180');       // a curve preset's artifact
 
 `initWeb` fetches the WASM from `webWasmUrl()` (a URL next to `web.js`) unless you pass `wasm` yourself (bytes, a
 URL or a `Response`); the bytes are hashed against the pinned digest before they are instantiated. Contract
-artifacts are code-split per curve preset; pass `preload: 'all'` to load every preset up front. If your bundler
+artifacts are code-split per curve preset (a preset chunk is under 2 KB: a patch against one shared curve template per
+build, rebuilt to the exact files and checked against their pinned SHA-256); pass `preload: 'all'` to load every
+preset up front. If your bundler
 pre-bundles dependencies (for example Vite's `optimizeDeps`), exclude this package so the WASM URL stays next to
 the module, or pass `wasm` explicitly.
+
+`@kassealhq/sdk/web` can load either network, so its import graph names the artifact chunks of both contract builds
+(about 2.9 MB each). A browser extension or any packager that ships every file reachable by import ends up with
+both. If your app serves one network, import its own entry instead: it has the same exports as `/web` plus
+`WEB_NETWORK` and `WEB_BUILD`, and its import graph reaches only that network's chunks.
+
+```js
+import { initWeb, ensurePresetArtifacts } from '@kassealhq/sdk/web/mainnet';   // or '@kassealhq/sdk/web/testnet-10'
+
+await initWeb();                                     // network optional; any other network is refused (UNSUPPORTED_NETWORK)
+await ensurePresetArtifacts('standard');
+```
+
+All web entries share one state: a page runs one Kaspa SDK and one network, whichever entry starts it.
+
+**Your own Kaspa SDK build.** An app that already ships rusty-kaspa v2.1.0 (web target) can pass its own build instead
+of the bundled one:
+
+```js
+import * as kaspa from './vendor/kaspa/kaspa.js';  // your bindings module (its default export is the WASM init)
+
+await initWeb({
+  network: 'mainnet',
+  kaspa: {
+    module: kaspa,
+    wasm: new URL('./vendor/kaspa/kaspa_bg.wasm', import.meta.url), // or bytes / a Response; omit if already initialised
+    sha256: '…',                                                     // optional: your WASM's own digest
+  },
+});
+```
+
+Before it is installed, your build must report version 2.1.0, expose every function the builders call, and pass a
+known-answer test: a fixed set of transactions (a P2PK transfer with payload and change; a covenant spend with a bound
+continuation, a two-output genesis group and a lock time; P2PK and P2SH scripts and addresses on both networks) is
+built, serialised, signed with a public test key and finalized through the SDK's own code paths, and every txid,
+serialised transaction, sighash and covenant id must equal, byte for byte, what the pinned build produced. Signatures
+are randomised by the Kaspa SDK, so they are checked by verifying them against the SDK's own sighash and the key.
+Any difference rejects with `SdkCompatibilityError` (`SDK_INCOMPATIBLE`, with `stage` and every `failures` line) and
+nothing is installed; a `sha256` that does not match your bytes rejects with `SdkIntegrityError`. Leave out the
+top-level `wasm` when you pass `kaspa`. Without `kaspa`, `initWeb` behaves exactly as before.
+
+To leave the bundled Kaspa SDK out of your package altogether, import the lite entry of your network: the same API
+without the bundled SDK, so neither `kaspa.js` nor the 11.5 MB `kaspa_bg.wasm` is reachable from it.
+
+```js
+import * as kaspa from './vendor/kaspa/kaspa.js';
+import { initWeb } from '@kassealhq/sdk/web-lite/mainnet';     // or '@kassealhq/sdk/web-lite/testnet-10'
+
+await initWeb({ kaspa: { module: kaspa, wasm: new URL('./vendor/kaspa/kaspa_bg.wasm', import.meta.url) } });
+```
 
 ## Integrity
 
@@ -163,7 +217,9 @@ the module, or pass `wasm` explicitly.
   template hashes and the SHA-256 of every file; the same manifest is compiled into the code, and every file is
   checked before use. A missing, altered or unlisted file is refused (`ArtifactIntegrityError`).
 - Kaspa WASM SDK: rusty-kaspa v2.1.0, unmodified. The Node build is hashed before it is loaded; the web WASM is
-  hashed before it is instantiated (`SdkIntegrityError`).
+  hashed before it is instantiated (`SdkIntegrityError`). A Kaspa SDK you pass to `initWeb` yourself (`kaspa` option)
+  is not held to the pinned hash: it is checked against your own `sha256` if you give one, and must pass the
+  known-answer test against the pinned build before it is used (`SdkCompatibilityError`).
 
 ## Errors
 

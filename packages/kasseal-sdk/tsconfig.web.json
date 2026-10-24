@@ -4,5 +4,5 @@
     "lib": ["ES2023", "DOM"],
     "types": []
   },
-  "include": ["src/web.ts", "src/generated/*.ts", "../txbuilder/src/types/*.d.ts"]
+  "include": ["src/web.ts", "src/web-mainnet.ts", "src/web-testnet-10.ts", "src/web-lite-mainnet.ts", "src/web-lite-testnet-10.ts", "src/generated/*.ts", "../txbuilder/src/types/*.d.ts"]
 }

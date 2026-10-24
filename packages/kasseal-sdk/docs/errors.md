@@ -84,7 +84,8 @@ raised before anything is signed or submitted.
 |---|---|---|
 | `UnsupportedNetwork` | `UNSUPPORTED_NETWORK` | A network id other than `mainnet` or `testnet-10`, or none where one is required |
 | `UnsupportedBuild` | `UNSUPPORTED_BUILD` | A contract build that is not the network's bundled build |
-| `SdkIntegrityError` | `SDK_INTEGRITY` | A bundled Kaspa WASM SDK file (Node entry), or the WASM bytes given to or fetched by `initWeb` (web entry), does not match its pinned SHA-256 |
+| `SdkIntegrityError` | `SDK_INTEGRITY` | A bundled Kaspa WASM SDK file (Node entry), or the WASM bytes given to or fetched by `initWeb` (web entry), does not match its pinned SHA-256; with `initWeb`'s `kaspa` option, your WASM bytes do not match the `sha256` you passed |
+| `SdkCompatibilityError` | `SDK_INCOMPATIBLE` | A Kaspa SDK passed to `initWeb` through its `kaspa` option reports another version, lacks part of the API the builders use, or does not reproduce the known answers of the pinned build (`stage`, `failures`); nothing was installed |
 | `ArtifactIntegrityError` | `ARTIFACT_INTEGRITY` | A bundled contract artifact or the artifact manifest is missing, altered or not listed |
 | `SdkNotInstalled` | `SDK_NOT_INSTALLED` | A build or signing call before the WASM is loaded: import the Node entry, or await `initWeb` |
 | `ArtifactMissing` | `ARTIFACT_MISSING` | A contract artifact the call needs is not in the bundle |

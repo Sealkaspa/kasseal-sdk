@@ -122,7 +122,21 @@ const signed = await signBuilt(wallet, built);      // one wallet popup
 **Loading the web entry.** Call `initWeb` once before you build. It instantiates the bundled Kaspa WASM SDK
 (rusty-kaspa v2.1.0) and installs the contract artifacts. If you serve the WASM file yourself (`wasm` option: bytes,
 a URL or a `Response`), the SDK hashes the bytes against the pinned SHA-256 before instantiating them and throws
-`SdkWasmMismatch` on any difference.
+`SdkIntegrityError` on any difference. A wallet or extension that serves one network can import
+`@kassealhq/sdk/web/mainnet` (or `@kassealhq/sdk/web/testnet-10`) instead of `@kassealhq/sdk/web`: same exports,
+but only that network's contract artifacts are reachable by import, so the other build's chunks never end up in your
+package. Its `initWeb` takes no `network`, and refuses any other one.
+
+**Using the wallet's own Kaspa SDK.** A wallet that already ships rusty-kaspa v2.1.0 (web target) need not ship a
+second copy: pass it as `initWeb({ network, kaspa: { module, wasm, sha256 } })`, where `module` is your imported
+bindings namespace (`import * as kaspa from '…/kaspa.js'`), `wasm` its binary (bytes, a URL or a `Response`; leave it
+out if your app has already initialised the module) and `sha256` your binary's digest (optional). Your build need not
+be byte-identical to ours: it is accepted when it reports 2.1.0, exposes the functions the builders call, and
+reproduces the pinned build's known answers (transactions, txids, sighashes, genesis covenant ids, signatures that
+verify) through the builders' own code paths. Otherwise `initWeb` rejects with `SdkCompatibilityError`, whose
+`failures` list every difference, and installs nothing. Run `initWeb` with your build in a test before you ship it. Import `@kassealhq/sdk/web-lite/mainnet` (or
+`@kassealhq/sdk/web-lite/testnet-10`) to leave our bundled Kaspa SDK out of your package: same API, `kaspa` required,
+and neither `kaspa.js` nor `kaspa_bg.wasm` is reachable from it.
 
 **What the wallet signs.** `signBuilt` passes the wallet exactly `built.inputsToSign`: the user's own KAS inputs and,
 for a sell, the user's own token cell. Every signature is `SIGHASH_ALL`. The wallet never signs a curve or pool input.

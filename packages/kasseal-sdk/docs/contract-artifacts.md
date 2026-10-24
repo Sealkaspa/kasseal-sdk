@@ -59,6 +59,22 @@ revision `c8a0871`.
   compares it with the manifest. A cell the API serves is checked the same way: the SDK recomputes the template hash
   from the cell's own redeem script and never trusts a hash from the wire.
 - **The Kaspa WASM SDK** (rusty-kaspa v2.1.0) is checked the same way, against SHA-256 values pinned in the package.
+  A Kaspa SDK you pass to `initWeb` yourself (`kaspa` option) is checked instead against your own `sha256`, if given,
+  and must reproduce the pinned build's known answers before it is used (see the README's Browser section).
+
+### How the browser build stores the curve programs
+
+The 66 curve programs of a build differ only in a few constants, so `@kassealhq/sdk/web` does not repeat each one in
+full. Per build it ships one **curve template** (the files of the `standard` preset) and, per preset, a small
+**patch** against it: the bytes where the program differs, its template hash and its constructor values. A preset
+chunk is 0.3 to 1.8 KB instead of about 42 KB.
+
+When a preset loads, the SDK rebuilds the exact text of `curve.<preset>.artifact.json` and
+`curve.ctor.<preset>.json`, byte for byte, and checks each against the SHA-256 in the manifest before using it, the
+same check as for a file stored whole. A changed template or patch gives a different text and is refused
+(`ArtifactIntegrityError`); a patch that cannot be applied is refused the same way. The digests are the ones in the
+table and manifest above; nothing about them changes. The files under `dist/artifacts/`, which the Node entry reads,
+are the original files, stored whole.
 
 ## Checking them yourself
 

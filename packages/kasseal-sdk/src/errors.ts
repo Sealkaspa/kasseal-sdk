@@ -49,7 +49,7 @@ import { MessageSignatureError, MessageSigningUnsupported } from '../../txbuilde
 import { SighashError } from '../../txbuilder/src/wallet/sighash.ts';
 import { SignRequestError } from '../../txbuilder/src/wallet/splice.ts';
 import { ApiError, HeadMoving } from './api.ts';
-import { ArtifactIntegrityError, SdkIntegrityError } from './integrity.ts';
+import { ArtifactIntegrityError, SdkCompatibilityError, SdkIntegrityError } from './integrity.ts';
 import { UnsupportedBuild, UnsupportedNetwork } from './networks.ts';
 
 type ErrorClass = abstract new (...args: never[]) => Error;
@@ -61,6 +61,7 @@ const TABLE: readonly (readonly [ErrorClass, string])[] = [
   [UnsupportedBuild, 'UNSUPPORTED_BUILD'],
   [ArtifactIntegrityError, 'ARTIFACT_INTEGRITY'],
   [SdkIntegrityError, 'SDK_INTEGRITY'],
+  [SdkCompatibilityError, 'SDK_INCOMPATIBLE'],
   // Artifacts and SDK
   [ArtifactMissing, 'ARTIFACT_MISSING'],
   [ArtifactNotLoaded, 'ARTIFACT_NOT_LOADED'],

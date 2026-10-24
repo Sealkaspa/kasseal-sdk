@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Package checks on the packed tarball: file allow-list, package.json, licence files, the artifact manifest (hashes
 // match, only the two bundled builds, template hashes recomputed), the Kaspa SDK digests, `exports` resolving in
-// Node, the declarations typechecking for a consumer, the root entry staying side-effect free, and a size report.
+// Node, the per-network web entries reaching only their own build's chunks, the declarations typechecking for a
+// consumer, the root entry staying side-effect free, and a size report.
 // Usage: check-package.mjs [unpacked package dir] (default: pack now).
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { checkWebEntries } from './check-web-entries.mjs';
 import { CheckFailed, PKG, fail, packAndUnpack, run, tempDir, walk } from './lib.mjs';
 
 const BUILDS = ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10'];
@@ -44,7 +46,7 @@ export function checkPackage(root, tarball) {
   for (const k of ['dependencies', 'peerDependencies', 'optionalDependencies', 'bundleDependencies', 'bundledDependencies']) {
     if (pj[k] !== undefined && Object.keys(pj[k]).length > 0) fail('package.json', `${k} must be empty (the package is self-contained)`);
   }
-  if (JSON.stringify(Object.keys(pj.exports).sort()) !== JSON.stringify(['.', './node', './package.json', './web'])) fail('package.json', `exports ${Object.keys(pj.exports)}`);
+  if (JSON.stringify(Object.keys(pj.exports).sort()) !== JSON.stringify(['.', './node', './package.json', './web', './web-lite/mainnet', './web-lite/testnet-10', './web/mainnet', './web/testnet-10'])) fail('package.json', `exports ${Object.keys(pj.exports)}`);
   if (JSON.stringify(pj).includes('workspace:')) fail('package.json', 'a workspace reference remains');
   report.push(`package.json: ${pj.name}@${pj.version}, ${pj.license}, no runtime dependencies`);
 
@@ -131,6 +133,22 @@ export function checkPackage(root, tarball) {
     if (refused !== 'ARTIFACT_SOURCE_NOT_INSTALLED') throw new Error('the root entry installed artifacts: ' + refused);
     const node = await import('@kassealhq/sdk/node');
     const web = await import('@kassealhq/sdk/web');
+    const webMainnet = await import('@kassealhq/sdk/web/mainnet');
+    const webTestnet = await import('@kassealhq/sdk/web/testnet-10');
+    if (webMainnet.WEB_NETWORK !== 'mainnet' || webTestnet.WEB_NETWORK !== 'testnet-10') throw new Error('per-network web entries resolve to the wrong network');
+    for (const m of [webMainnet, webTestnet]) {
+      if (typeof m.initWeb !== 'function' || m.ProofNotBound !== root.ProofNotBound) throw new Error('per-network web entry incomplete');
+      for (const k of Object.keys(web)) if (!(k in m)) throw new Error('per-network web entry lacks ' + k);
+    }
+    // The lite entries: the API of their per-network entry minus the bundled Kaspa SDK's URL and digests.
+    const liteMainnet = await import('@kassealhq/sdk/web-lite/mainnet');
+    const liteTestnet = await import('@kassealhq/sdk/web-lite/testnet-10');
+    const BUNDLED_ONLY = ['webWasmUrl', 'WEB_WASM_SHA256', 'WEB_JS_SHA256'];
+    for (const [m, full] of [[liteMainnet, webMainnet], [liteTestnet, webTestnet]]) {
+      if (m.WEB_NETWORK !== full.WEB_NETWORK || m.ProofNotBound !== root.ProofNotBound) throw new Error('lite web entry resolves wrong');
+      for (const k of Object.keys(full)) if (!(k in m) && !BUNDLED_ONLY.includes(k)) throw new Error('lite web entry lacks ' + k);
+      for (const k of BUNDLED_ONLY) if (k in m) throw new Error('lite web entry exports ' + k);
+    }
     const pj = (await import('@kassealhq/sdk/package.json', { with: { type: 'json' } })).default;
     if (typeof node.createTxBuilder !== 'function' || typeof web.initWeb !== 'function' || pj.name !== '@kassealhq/sdk') throw new Error('exports incomplete');
     if (node.ProofNotBound !== root.ProofNotBound || web.ProofNotBound !== root.ProofNotBound) throw new Error('entries do not share classes');
@@ -140,7 +158,10 @@ export function checkPackage(root, tarball) {
     console.log(JSON.stringify({ root: Object.keys(root).length, node: Object.keys(node).length, web: Object.keys(web).length }));
   `);
   const counts = JSON.parse(run(process.execPath, ['resolve.mjs'], { cwd: consumer }));
-  report.push(`exports: '.', './node', './web', './package.json' resolve; deep paths refused; root entry side-effect free (${counts.root} root exports)`);
+  report.push(`exports: '.', './node', './web', './web/mainnet', './web/testnet-10', './web-lite/mainnet', './web-lite/testnet-10', './package.json' resolve; deep paths refused; root entry side-effect free (${counts.root} root exports)`);
+
+  // Browser entries: each per-network entry's import graph reaches only its own build's artifact chunks.
+  for (const line of checkWebEntries(path.join(root, 'dist')).report) report.push(`web entries: ${line}`);
 
   // Declarations: a consumer typechecks against the shipped types with NodeNext resolution.
   writeFileSync(path.join(consumer, 'tsconfig.json'), JSON.stringify({
@@ -150,6 +171,9 @@ export function checkPackage(root, tarball) {
   writeFileSync(path.join(consumer, 'consumer.ts'), `
     import { createTxBuilder, verifyArtifacts, type BuiltTx, type UtxoSources } from '@kassealhq/sdk/node';
     import { initWeb, type InitWebOptions } from '@kassealhq/sdk/web';
+    import { initWeb as initMainnet, WEB_NETWORK, type InitWebOptions as MainnetOptions } from '@kassealhq/sdk/web/mainnet';
+    import { initWeb as initTestnet } from '@kassealhq/sdk/web/testnet-10';
+    import { initWeb as initLite, type InitWebOptions as LiteOptions, type KaspaSdkOption } from '@kassealhq/sdk/web-lite/mainnet';
     import { errorCode, ProofNotBound, swapKasForTokens, maxWithSlippage, type KassealNetwork } from '@kassealhq/sdk';
     const network: KassealNetwork = 'testnet-10';
     declare const sources: UtxoSources;
@@ -157,7 +181,13 @@ export function checkPackage(root, tarball) {
     const p: Promise<BuiltTx> = b.buildSweep({ covenantId: '00', venue: 'pool', funder: 'x' });
     const code: 'PROOF_NOT_BOUND' = (null as unknown as ProofNotBound).code;
     const o: InitWebOptions = { network };
-    void [p, code, o, initWeb, verifyArtifacts, errorCode, swapKasForTokens, maxWithSlippage];
+    const mo: MainnetOptions = { network: WEB_NETWORK, preload: ['standard'] };
+    const started: Promise<void>[] = [initMainnet(mo), initMainnet(), initTestnet({ network: 'testnet-10' })];
+    declare const kaspaModule: { default: (o: unknown) => Promise<unknown> };
+    const kaspa: KaspaSdkOption = { module: kaspaModule, wasm: new Uint8Array(0), sha256: '00'.repeat(32) };
+    const lo: LiteOptions = { kaspa, preload: ['standard'] };
+    const withOwn: InitWebOptions = { network, kaspa };
+    void [p, code, o, initWeb, verifyArtifacts, errorCode, swapKasForTokens, maxWithSlippage, started, initLite(lo), withOwn];
   `);
   const tsc = path.join(PKG, 'node_modules', 'typescript', 'bin', 'tsc');
   try {

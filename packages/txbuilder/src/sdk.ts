@@ -70,6 +70,23 @@ export function sdkAvailable(): boolean {
   return installed !== undefined || loader !== undefined;
 }
 
+/**
+ * Run `fn` synchronously with `k` answering `sdk()`, then restore whatever was installed before (also when `fn`
+ * throws). For the known-answer test of a candidate SDK before it is installed; `k` is not version-checked here.
+ */
+export function withSdk<T>(k: KaspaSdk, fn: () => T): T {
+  const prevInstalled = installed;
+  const prevLoader = loader;
+  installed = k;
+  loader = undefined;
+  try {
+    return fn();
+  } finally {
+    installed = prevInstalled;
+    loader = prevLoader;
+  }
+}
+
 /** The verified SDK namespace. */
 export function sdk(): KaspaSdk {
   if (installed === undefined) {

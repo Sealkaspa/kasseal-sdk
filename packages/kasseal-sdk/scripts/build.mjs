@@ -121,14 +121,43 @@ writeFileSync(path.join(GEN, 'manifest.ts'), [
   `export const KASPA_SHA256: Readonly<Record<string, string>> = ${JSON.stringify(kaspa, null, 1)};`,
   '',
 ].join('\n'));
-// One web module per build: `base` (pool and token reference) and one per curve preset, each `{ path: text }`.
+// Web modules per build: `base` (pool and token reference, `{ path: text }`), `curve-template` (the reference preset's
+// curve files) and one per curve preset (a patch against the template; src/web-chunks.ts). Every preset chunk is
+// decoded here and must give back each file byte for byte.
+const webChunks = await import(pathToFileURL(path.join(PKG, 'scripts', 'web-chunks.mjs')).href);
+const webDecode = await import(pathToFileURL(path.join(PKG, 'src', 'web-chunks.ts')).href);
+const CURVE_TEMPLATE_PRESET = 'standard';
+const webSizes = {};
 for (const build of Object.keys(BUILDS)) {
-  const chunk = (name, paths) => {
-    const obj = Object.fromEntries(paths.map((p) => [p, readFileSync(files.get(p), 'utf8')]));
-    writeFileSync(path.join(GEN, 'web', `${build}--${name}.js`), `export default ${JSON.stringify(obj)};\n`);
+  const write = (name, obj) => {
+    const text = `export default ${JSON.stringify(obj)};\n`;
+    writeFileSync(path.join(GEN, 'web', `${build}--${name}.js`), text);
+    return text.length;
   };
-  chunk('base', [`contracts/pool/v1/artifacts/${build}/pool.artifact.json`, `contracts/pool/v1/artifacts/${build}/pool.ctor.json`, TOKEN_REFERENCE]);
-  for (const p of PRESETS) chunk(p, [`contracts/curve/v1/artifacts/${build}/curve.${p}.artifact.json`, `contracts/curve/v1/artifacts/${build}/curve.ctor.${p}.json`]);
+  const textOf = (p) => readFileSync(files.get(p), 'utf8');
+  write('base', Object.fromEntries([`contracts/pool/v1/artifacts/${build}/pool.artifact.json`, `contracts/pool/v1/artifacts/${build}/pool.ctor.json`, TOKEN_REFERENCE].map((p) => [p, textOf(p)])));
+  const curvePaths = (p) => ({ artifact: `contracts/curve/v1/artifacts/${build}/curve.${p}.artifact.json`, ctor: `contracts/curve/v1/artifacts/${build}/curve.ctor.${p}.json` });
+  const { template, patches } = webChunks.encodeCurvePresets(
+    Object.fromEntries(PRESETS.map((p) => [p, Object.fromEntries(Object.entries(curvePaths(p)).map(([kind, f]) => [kind, textOf(f)]))])),
+    CURVE_TEMPLATE_PRESET,
+  );
+  const sizes = { template: write('curve-template', template), presets: 0, largest: 0 };
+  for (const p of PRESETS) {
+    const chunk = { curvePatch: 1, files: Object.fromEntries(Object.entries(curvePaths(p)).map(([kind, f]) => [f, patches[p][kind]])) };
+    const decoded = webDecode.decodeCurvePatchChunk(template, JSON.parse(JSON.stringify(chunk)));
+    for (const f of Object.values(curvePaths(p))) {
+      const want = readFileSync(files.get(f));
+      if (decoded[f] === undefined || !Buffer.from(decoded[f], 'utf8').equals(want)) fail(`${build} ${p}: the web chunk does not give back ${f} byte for byte`);
+      if (sha256(Buffer.from(decoded[f], 'utf8')) !== manifest.files[f]) fail(`${build} ${p}: the web chunk's ${f} does not match the manifest`);
+    }
+    const n = write(p, chunk);
+    sizes.presets += n;
+    sizes.largest = Math.max(sizes.largest, n);
+  }
+  webSizes[build] = sizes;
+}
+for (const [build, s] of Object.entries(webSizes)) {
+  console.log(`web chunks ${build}: curve template ${s.template} B, ${PRESETS.length} preset patches ${s.presets} B (largest ${s.largest} B), every file given back byte for byte`);
 }
 if (genOnly) {
   console.log(`generated: ${Object.keys(manifest.files).length} artifact files, ${Object.keys(kaspa).length} SDK files`);
@@ -152,9 +181,16 @@ writeFileSync(path.join(DIST, 'kaspa', 'sdk-types.d.ts'), "export type KaspaSdk 
 const esbuild = require('esbuild-wasm');
 const scrub = await import(pathToFileURL(path.join(PKG, 'scripts', 'scrub.mjs')).href);
 const KASPA_WEB = /sdk\/vendor\/web\/kaspa\/kaspa\.js$/;
+// The browser entries: `web` (both builds), one per network that reaches only its own build's artifact chunks, and
+// one per network without the bundled Kaspa SDK (`web-lite-*`, for apps that pass their own).
+const WEB_ENTRIES = {
+  web: 'src/web.ts', 'web-mainnet': 'src/web-mainnet.ts', 'web-testnet-10': 'src/web-testnet-10.ts',
+  'web-lite-mainnet': 'src/web-lite-mainnet.ts', 'web-lite-testnet-10': 'src/web-lite-testnet-10.ts',
+};
+const BUNDLES_KASPA = ['web', 'web-mainnet', 'web-testnet-10'];
 const result = await esbuild.build({
   absWorkingDir: PKG,
-  entryPoints: { index: 'src/index.ts', node: 'src/node.ts', web: 'src/web.ts' },
+  entryPoints: { index: 'src/index.ts', node: 'src/node.ts', ...WEB_ENTRIES },
   outdir: DIST,
   bundle: true,
   splitting: true,
@@ -185,7 +221,7 @@ for (const [out, meta] of Object.entries(result.metafile.outputs)) {
   for (const imp of meta.imports) {
     if (!imp.external) continue;
     if (imp.path.startsWith('node:')) continue;
-    if (imp.path === './kaspa/web/kaspa.js' && out === 'dist/web.js') continue;
+    if (imp.path === './kaspa/web/kaspa.js' && BUNDLES_KASPA.some((e) => out === `dist/${e}.js`)) continue;
     fail(`${out} imports ${imp.path}`);
   }
 }
@@ -198,7 +234,7 @@ const KASPA_TYPES = {
   '@kasseal/sdk/vendor/nodejs/kaspa/kaspa.js': './kaspa/nodejs/kaspa.js',
 };
 const bundle = await rollup({
-  input: { index: path.join(PKG, 'src/index.ts'), node: path.join(PKG, 'src/node.ts'), web: path.join(PKG, 'src/web.ts') },
+  input: { index: path.join(PKG, 'src/index.ts'), node: path.join(PKG, 'src/node.ts'), ...Object.fromEntries(Object.entries(WEB_ENTRIES).map(([k, v]) => [k, path.join(PKG, v)])) },
   external: (id) => id in KASPA_TYPES || KASPA_WEB.test(id) || id.startsWith('node:'),
   plugins: [dts({
     respectExternal: true,

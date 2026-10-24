@@ -1,6 +1,6 @@
 {
   "name": "@kassealhq/sdk",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Quotes, transaction builders, launch-proof verification and wallet adapters for Kasseal tokens on Kaspa.",
   "license": "MIT",
   "type": "module",
@@ -36,6 +36,22 @@
       "types": "./dist/web.d.ts",
       "default": "./dist/web.js"
     },
+    "./web/mainnet": {
+      "types": "./dist/web-mainnet.d.ts",
+      "default": "./dist/web-mainnet.js"
+    },
+    "./web/testnet-10": {
+      "types": "./dist/web-testnet-10.d.ts",
+      "default": "./dist/web-testnet-10.js"
+    },
+    "./web-lite/mainnet": {
+      "types": "./dist/web-lite-mainnet.d.ts",
+      "default": "./dist/web-lite-mainnet.js"
+    },
+    "./web-lite/testnet-10": {
+      "types": "./dist/web-lite-testnet-10.d.ts",
+      "default": "./dist/web-lite-testnet-10.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
@@ -64,6 +80,7 @@
     "gen": "node scripts/build.mjs --gen-only",
     "typecheck": "node scripts/build.mjs --gen-only && tsc -p tsconfig.json && tsc -p tsconfig.web.json",
     "test": "node scripts/build.mjs && node --test test/*.test.mjs",
+    "kat:fixtures": "node scripts/kat-fixtures.mjs",
     "release:check": "node scripts/release-check.mjs"
   },
   "devDependencies": {

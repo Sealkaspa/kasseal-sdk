@@ -51,6 +51,25 @@ export class SdkIntegrityError extends Error {
   }
 }
 
+/**
+ * A Kaspa SDK passed to `initWeb` (`kaspa` option) was refused: it reports another version, lacks part of the API the
+ * builders use, or does not reproduce the known answers of the pinned build. Nothing was installed.
+ */
+export class SdkCompatibilityError extends Error {
+  /** The check that failed. */
+  readonly stage: 'version' | 'surface' | 'known-answer';
+  /** What differed, one line each (for example `p2pk.txid: got … expected …`). */
+  readonly failures: readonly string[];
+  constructor(stage: 'version' | 'surface' | 'known-answer', failures: readonly string[]) {
+    const shown = failures.slice(0, 5).join('; ');
+    const more = failures.length > 5 ? ` (+${failures.length - 5} more)` : '';
+    super(`Kaspa SDK passed to initWeb is not compatible (${stage}): ${shown}${more}`);
+    this.name = 'SdkCompatibilityError';
+    this.stage = stage;
+    this.failures = Object.freeze([...failures]);
+  }
+}
+
 /** The pinned SHA-256 of an artifact path; refuses a path the manifest does not list. */
 export function expectedArtifactDigest(path: string): string {
   const d = artifactManifest.files[path];

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Every release check, in order, on the tarball npm would publish: build, pack, package checks (files, licences,
-// manifest, SDK digests, exports, types, size), leak scans (the tarball and the whole repository), byte parity with
-// the builder loaded from this repository's sources (using the packed dist), and the package tests. Any failure, or
-// any check that cannot run, exits non-zero.
+// Every release check, in order, on the tarball npm would publish: build, the known-answer fixtures against the pinned
+// Kaspa SDK, pack, package checks (files, licences, manifest, SDK digests, exports, types, size), leak scans (the
+// tarball and the whole repository), byte parity with the builder loaded from this repository's sources (using the
+// packed dist), and the package tests. Any failure, or any check that cannot run, exits non-zero.
 import path from 'node:path';
 import { checkPackage } from './check-package.mjs';
 import { scanPackage, scanRepo } from './check-leaks.mjs';
@@ -14,6 +14,9 @@ const step = (name) => console.log(`\n== ${name}`);
 try {
   step('build');
   process.stdout.write(run(process.execPath, [path.join(PKG, 'scripts', 'build.mjs')], { cwd: PKG }));
+
+  step('known answers (src/kat-fixtures.ts vs the pinned Kaspa SDK)');
+  process.stdout.write(run(process.execPath, [path.join(PKG, 'scripts', 'kat-fixtures.mjs'), '--check'], { cwd: PKG }));
 
   step('pack');
   const { tarball, root, info } = packAndUnpack();
@@ -36,7 +39,7 @@ try {
   for (const r of checkParity(path.join(root, 'dist'))) console.log(`  ${r}`);
 
   step('tests');
-  const out = run(process.execPath, ['--test', ...['node', 'web'].map((t) => path.join(PKG, 'test', `${t}.test.mjs`))], { cwd: PKG });
+  const out = run(process.execPath, ['--test', ...['node', 'web', 'web-entries', 'web-chunks'].map((t) => path.join(PKG, 'test', `${t}.test.mjs`))], { cwd: PKG });
   const summary = out.split('\n').filter((l) => /^# (tests|pass|fail)/.test(l));
   for (const l of summary) console.log(`  ${l}`);
 
