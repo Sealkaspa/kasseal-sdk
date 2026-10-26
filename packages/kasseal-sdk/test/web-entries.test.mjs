@@ -15,7 +15,9 @@ const PKG = fileURLToPath(new URL('../', import.meta.url));
 const load = (f) => import(pathToFileURL(path.join(DIST, f)).href);
 const web = await load('web.js');
 const ENTRIES = { mainnet: 'web-mainnet.js', 'testnet-10': 'web-testnet-10.js' };
-const BUILD = { mainnet: 'v1-kasseal-mainnet-2', 'testnet-10': 'v1-kasseal-mainnet-2-tn10' };
+/** Each network's builds, the launch build (Kasseal-mainnet-3, the creator window) first. */
+const BUILDS = { mainnet: ['v1-kasseal-mainnet-3', 'v1-kasseal-mainnet-2'], 'testnet-10': ['v1-kasseal-mainnet-3-tn10', 'v1-kasseal-mainnet-2-tn10'] };
+const BUILD = { mainnet: BUILDS.mainnet[0], 'testnet-10': BUILDS['testnet-10'][0] };
 const OTHER = { mainnet: 'testnet-10', 'testnet-10': 'mainnet' };
 
 const node = (code, cwd = DIST) => {
@@ -34,28 +36,30 @@ test('package.json exports the per-network and lite entries next to the unchange
   assert.deepEqual(Object.keys(pj.exports), ['.', './node', './web', './web/mainnet', './web/testnet-10', './web-lite/mainnet', './web-lite/testnet-10', './package.json']);
 });
 
-test('each per-network entry reaches its own build\'s chunks only; ./web still reaches both', () => {
+test('each per-network entry reaches its own builds\' chunks only; ./web still reaches every build', () => {
   const { results } = checkWebEntries(DIST);
   for (const [network, file] of Object.entries(ENTRIES)) {
     const files = [...reachable(DIST, file).keys()];
-    const own = files.filter((f) => f.startsWith(`chunks/${BUILD[network]}--`));
-    const other = files.filter((f) => f.startsWith(`chunks/${BUILD[OTHER[network]]}--`));
-    assert.equal(other.length, 0, `${file} reaches ${other.length} chunk(s) of ${BUILD[OTHER[network]]}`);
-    assert.equal(own.length, Object.keys(web.artifactManifest.builds[BUILD[network]].presets).length + 2, `${file} reaches every chunk of its build`);
-    assert.ok(!readFileSync(path.join(DIST, file), 'utf8').includes(`${BUILD[OTHER[network]]}--`), `${file} names no chunk of the other build`);
+    const ofBuild = (b) => files.filter((f) => f.startsWith(`chunks/${b}--`));
+    for (const b of BUILDS[OTHER[network]]) {
+      assert.equal(ofBuild(b).length, 0, `${file} reaches ${ofBuild(b).length} chunk(s) of ${b}`);
+      assert.ok(!readFileSync(path.join(DIST, file), 'utf8').includes(`${b}--`), `${file} names no chunk of ${b}`);
+    }
+    for (const b of BUILDS[network]) assert.equal(ofBuild(b).length, Object.keys(web.artifactManifest.builds[b].presets).length + 2, `${file} reaches every chunk of ${b}`);
     const chunkBytes = (r) => Object.values(r.perBuild).reduce((a, x) => a + x.bytes, 0);
     assert.ok(results[file].total < results['web.js'].total, `${file}: ${results[file].total} B vs web.js ${results['web.js'].total} B`);
-    assert.equal(chunkBytes(results[file]), results['web.js'].perBuild[BUILD[network]].bytes, `${file} reaches the same chunk bytes of its build as web.js`);
+    assert.equal(chunkBytes(results[file]), BUILDS[network].reduce((a, b) => a + results['web.js'].perBuild[b].bytes, 0), `${file} reaches the same chunk bytes of its builds as web.js`);
   }
-  for (const b of Object.values(BUILD)) assert.ok(results['web.js'].perBuild[b].chunks > 0, `web.js reaches ${b}`);
+  for (const b of Object.values(BUILDS).flat()) assert.ok(results['web.js'].perBuild[b].chunks > 0, `web.js reaches ${b}`);
 });
 
-test('each per-network entry exports what ./web exports, plus WEB_NETWORK and WEB_BUILD, sharing classes', async () => {
+test('each per-network entry exports what ./web exports, plus WEB_NETWORK, WEB_BUILD and WEB_BUILDS, sharing classes', async () => {
   for (const [network, file] of Object.entries(ENTRIES)) {
     const m = await load(file);
-    assert.deepEqual(Object.keys(m).filter((k) => k !== 'WEB_NETWORK' && k !== 'WEB_BUILD').sort(), Object.keys(web).sort(), file);
+    assert.deepEqual(Object.keys(m).filter((k) => k !== 'WEB_NETWORK' && k !== 'WEB_BUILD' && k !== 'WEB_BUILDS').sort(), Object.keys(web).sort(), file);
     assert.equal(m.WEB_NETWORK, network);
     assert.equal(m.WEB_BUILD, m.BUILD_OF_NETWORK[network]);
+    assert.deepEqual([...m.WEB_BUILDS], [...m.BUILDS_OF_NETWORK[network]]);
     assert.equal(m.WEB_WASM_SHA256, web.WEB_WASM_SHA256);
     assert.equal(m.WEB_JS_SHA256, web.WEB_JS_SHA256);
     assert.equal(m.webWasmUrl().href, web.webWasmUrl().href);
@@ -108,10 +112,13 @@ test('preload "all" through a per-network entry loads every preset of that build
     const m = await import('./web-mainnet.js');
     const { readFileSync } = await import('node:fs');
     await m.initWeb({ wasm: readFileSync('kaspa/web/kaspa_bg.wasm'), preload: 'all' });
-    const presets = Object.keys(m.artifactManifest.builds['v1-kasseal-mainnet-2'].presets);
-    let ok = 0;
-    for (const p of presets) if (m.createContext(p, 'mainnet').curve.templateHash === m.artifactManifest.builds['v1-kasseal-mainnet-2'].presets[p]) ok++;
-    console.log(JSON.stringify({ ok, total: presets.length }));
+    let ok = 0; let total = 0;
+    for (const b of ['v1-kasseal-mainnet-3', 'v1-kasseal-mainnet-2']) {
+      const presets = Object.keys(m.artifactManifest.builds[b].presets);
+      total += presets.length;
+      for (const p of presets) if (m.createContext(p, 'mainnet', 'v1', b).curve.templateHash === m.artifactManifest.builds[b].presets[p]) ok++;
+    }
+    console.log(JSON.stringify({ ok, total }));
   `);
   assert.equal(r.ok, r.total);
 });

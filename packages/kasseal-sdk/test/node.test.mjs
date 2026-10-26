@@ -27,7 +27,10 @@ test('the Node entry exports the public surface and leaves out launch, batch and
     'loadVaultInstanceV1', 'V1_FROZEN_REVISIONS', 'V1_MAINNET_REVISION', 'PRESET_TINY', 'PRESET_A', 'installArtifactSource', 'registerSdkLoader', 'NETWORK_ID']) {
     assert.equal(m[name], undefined, name);
   }
-  assert.deepEqual([...m.SUPPORTED_BUILDS], ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10']);
+  assert.deepEqual([...m.SUPPORTED_BUILDS], ['v1-kasseal-mainnet-3', 'v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-3-tn10', 'v1-kasseal-mainnet-2-tn10']);
+  assert.deepEqual({ ...m.BUILD_OF_NETWORK }, { mainnet: 'v1-kasseal-mainnet-3', 'testnet-10': 'v1-kasseal-mainnet-3-tn10' });
+  for (const name of ['hasCreatorWindow', 'curveBuySequence', 'fundedByCreator']) assert.equal(typeof m[name], 'function', name);
+  assert.equal(m.CREATOR_WINDOW_DAA, 200n);
   assert.equal(m.API_BASE_URLS.mainnet, 'https://app.kasseal.com/v1');
   assert.equal(m.API_BASE_URLS['testnet-10'], 'https://testnet.kasseal.com/v1');
 });
@@ -48,6 +51,22 @@ test('network and build are explicit: an unknown network or another network\'s b
   assert.throws(() => m.createContext('standard', 'mainnet', 'v1', 'v1-kasseal-mainnet-2-tn10'), (e) => e.code === 'UNSUPPORTED_BUILD');
   assert.throws(() => m.createTxBuilder({ sources: {} }), (e) => e.code === 'UNSUPPORTED_NETWORK');
   assert.throws(() => m.createContext('tiny', 'testnet-10'), (e) => e.code === 'ARTIFACT_MISSING', 'retired presets are not bundled');
+});
+
+test('both builds of a network: the launch build (creator window) by default, the earlier one by name; a fresh curve\'s first buy by anyone but the creator waits the window', () => {
+  for (const [network, builds] of Object.entries(m.BUILDS_OF_NETWORK)) {
+    assert.equal(m.createContext('standard', network).pool.revision, builds[0]);
+    const [launch, earlier] = builds.map((b) => m.createContext('standard', network, 'v1', b));
+    assert.ok(m.hasCreatorWindow(launch.curve) && !m.hasCreatorWindow(earlier.curve), network);
+    assert.equal(launch.pool.templateHash, earlier.pool.templateHash, `${network}: one pool program`);
+    const k = m.sdk();
+    const address = new k.PrivateKey(`${'00'.repeat(31)}0b`).toAddress(network).toString();
+    const funding = [{ outpoint: { txid: '44'.repeat(32), index: 0 }, amount: 100n * 100_000_000n, spk: m.p2pkScript(address), daaScore: 1n, address }];
+    const fresh = (ctx) => ({ kind: 'curve', outpoint: { txid: '33'.repeat(32), index: 0 }, value: 5n * 100_000_000n, covenantId: '33'.repeat(32), program: m.curveProgram(ctx.curve, { tokenCovId: m.fromHex(T), lotsSold: 0n, feeAccrued: 0n, phase: 1 }), state: { tokenCovId: m.fromHex(T), lotsSold: 0n, feeAccrued: 0n, phase: 1 }, daaScore: 1n });
+    assert.deepEqual(m.curveBuySequence(launch, fresh(launch), funding), { sequence: m.CREATOR_WINDOW_DAA }, network);
+    assert.deepEqual(m.curveBuySequence(earlier, fresh(earlier), funding), {}, network);
+  }
+  assert.throws(() => m.createContext('standard', 'mainnet', 'v1', 'v1-kasseal-mainnet-3-tn10'), (e) => e.code === 'UNSUPPORTED_BUILD');
 });
 
 test('quote and build a pool buy on fake cells (composable pool, testnet-10)', () => {

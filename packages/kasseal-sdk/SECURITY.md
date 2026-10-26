@@ -10,7 +10,7 @@ open a public issue, post on social media or discuss it in a public channel unti
 
 Please include:
 
-- what is affected: the SDK version, the contract build (`v1-kasseal-mainnet-2` or `v1-kasseal-mainnet-2-tn10`), the
+- what is affected: the SDK version, the contract build (`v1-kasseal-mainnet-3`, `v1-kasseal-mainnet-2` or a testnet-10 build), the
   API route, or the app page;
 - the steps to reproduce, or a proof of concept (testnet-10 only);
 - the impact as you understand it: whose funds, how much, under what conditions;

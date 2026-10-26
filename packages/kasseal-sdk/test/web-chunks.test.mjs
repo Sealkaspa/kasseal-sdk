@@ -12,8 +12,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
 const decoder = await import(new URL('../src/web-chunks.ts', import.meta.url).href);
 const manifest = JSON.parse(readFileSync(path.join(DIST, 'artifacts', 'manifest.json'), 'utf8'));
-const BUILDS = ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10'];
-const NETWORK = { 'v1-kasseal-mainnet-2': 'mainnet', 'v1-kasseal-mainnet-2-tn10': 'testnet-10' };
+const BUILDS = ['v1-kasseal-mainnet-3', 'v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-3-tn10', 'v1-kasseal-mainnet-2-tn10'];
+const NETWORK = { 'v1-kasseal-mainnet-3': 'mainnet', 'v1-kasseal-mainnet-2': 'mainnet', 'v1-kasseal-mainnet-3-tn10': 'testnet-10', 'v1-kasseal-mainnet-2-tn10': 'testnet-10' };
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 
 /** The emitted chunk file of `<build>--<name>` (esbuild appends `-<hash>.js`). */
@@ -26,7 +26,7 @@ function chunkFile(dir, build, name) {
 
 const loadChunk = async (build, name) => (await import(pathToFileURL(chunkFile(path.join(DIST, 'chunks'), build, name)).href)).default;
 
-test('every curve preset of both builds is rebuilt from template + patch byte for byte', async () => {
+test('every curve preset of every build is rebuilt from template + patch byte for byte', async () => {
   for (const build of BUILDS) {
     const presets = Object.keys(manifest.builds[build].presets).sort();
     assert.equal(presets.length, 66, build);
@@ -50,7 +50,7 @@ test('every curve preset of both builds is rebuilt from template + patch byte fo
   }
 });
 
-test('the web entry loads every preset of both networks through the digest checks', () => {
+test('the web entry loads every preset of every build through the digest checks', () => {
   for (const build of BUILDS) {
     const r = spawnSync(process.execPath, ['--input-type=module', '-e', `
       const w = await import('./web.js');
@@ -59,7 +59,7 @@ test('the web entry loads every preset of both networks through the digest check
       const info = w.artifactManifest.builds[${JSON.stringify(build)}];
       let n = 0;
       for (const [preset, h] of Object.entries(info.presets)) {
-        const ctx = w.createContext(preset, info.network);
+        const ctx = w.createContext(preset, info.network, 'v1', ${JSON.stringify(build)});
         if (ctx.curve.templateHash !== h) throw new Error(preset + ': template hash differs');
         n++;
       }

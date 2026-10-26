@@ -379,7 +379,7 @@ export function userToken(amount: bigint, xOnlyPubkey: Uint8Array, { borrowSchem
  * The frozen v1 revisions whose pools bind L to themselves as the current build does (`lpBoundToPool`), including
  * `v1-kasseal-mainnet-2` and its testnet-10 build. Earlier entries are retained so cells of those builds still decode.
  */
-export const V1_LP_BOUND_FROZEN_REVISIONS: readonly string[] = Object.freeze(['v1-2026-10-18-final', 'v1-kasseal-mainnet-tn10', 'v1-kasseal-mainnet', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-2']);
+export const V1_LP_BOUND_FROZEN_REVISIONS: readonly string[] = Object.freeze(['v1-2026-10-18-final', 'v1-kasseal-mainnet-tn10', 'v1-kasseal-mainnet', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-3-tn10', 'v1-kasseal-mainnet-3']);
 
 /**
  * Whether a context's pool binds its LP-share lineage L to itself: the current v1 build and

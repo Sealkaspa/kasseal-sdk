@@ -45,6 +45,8 @@ export interface TokenMeta {
   description?: string;
   /** DAA score of the token's creation. */
   createdAtDaa?: number;
+  /** Time of the token's creation (the accepting block's timestamp), milliseconds since the epoch; with `createdAtDaa`. */
+  createdAtMs?: number;
   /**
    * Kasseal hid this token's declared metadata (name, ticker, description, image) after a takedown request; the
    * token itself still trades and verifies. The UI shows a neutral "Hidden by Kasseal" label and no declared links.

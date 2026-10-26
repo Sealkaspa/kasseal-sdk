@@ -11,7 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { checkWebEntries } from './check-web-entries.mjs';
 import { CheckFailed, PKG, fail, packAndUnpack, run, tempDir, walk } from './lib.mjs';
 
-const BUILDS = ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10'];
+const BUILDS = ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-3', 'v1-kasseal-mainnet-3-tn10'];
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 
 export function checkPackage(root, tarball) {

@@ -25,7 +25,7 @@ export function checkParity(distDir = path.join(PKG, 'dist')) {
   };
   const dist = side(['dist', path.resolve(distDir)]);
   const repo = side(['repo']);
-  const expected = PARITY_NETWORKS.flatMap(([n]) => SCENARIOS.map((s) => `${n} ${s}`)).sort();
+  const expected = PARITY_NETWORKS.flatMap(([, build]) => SCENARIOS.map((s) => `${build} ${s}`)).sort();
   for (const [name, r] of [['dist', dist], ['repo', repo]]) {
     const keys = Object.keys(r).sort();
     if (JSON.stringify(keys) !== JSON.stringify(expected)) fail('parity', `${name} built ${keys.join(', ')}; expected ${expected.join(', ')}`);
@@ -37,7 +37,7 @@ export function checkParity(distDir = path.join(PKG, 'dist')) {
     if (typeof a.txid !== 'string' || !/^[0-9a-f]{64}$/.test(a.txid) || typeof a.txJson !== 'string' || a.txJson.length < 100) fail('parity', `${k}: no transaction`);
     if (a.txid !== b.txid) fail('parity', `${k}: txid ${a.txid} (dist) != ${b.txid} (repo)`);
     if (a.txJson !== b.txJson) fail('parity', `${k}: txJson differs (dist ${a.txJson.length} chars, repo ${b.txJson.length})`);
-    rows.push(`${k.padEnd(28)} ${a.txid}`);
+    rows.push(`${k.padEnd(46)} ${a.txid}`);
   }
   return rows;
 }

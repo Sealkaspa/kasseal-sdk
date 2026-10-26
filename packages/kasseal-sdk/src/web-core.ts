@@ -9,7 +9,7 @@ import { artifactSourceFromFiles, installArtifactSource, registerLazyArtifacts }
 import { installSdk, sdkAvailable, type KaspaSdk } from '../../txbuilder/src/sdk.ts';
 import { verifyKaspaSdk } from './kat.ts';
 import { ArtifactIntegrityError, SdkIntegrityError, artifactManifest, assertArtifactDigest, kaspaSdkDigests } from './integrity.ts';
-import { assertNetwork, BUILD_OF_NETWORK, UnsupportedNetwork, type KassealNetwork } from './networks.ts';
+import { assertNetwork, BUILDS_OF_NETWORK, UnsupportedNetwork, type KassealNetwork } from './networks.ts';
 import { decodeCurvePatchChunk, isCurvePatchChunk, isCurveTemplateChunk } from './web-chunks.ts';
 
 /** SHA-256 of the bundled web `kaspa_bg.wasm` (each entry exports it as `WEB_WASM_SHA256`). */
@@ -196,17 +196,25 @@ export function initWebWith(entry: WebEntry, network: KassealNetwork, options: I
       await bundled.initWasm({ module_or_path: bytes });
       installSdk(bundled.kaspa as KaspaSdk);
     }
-    const build = BUILD_OF_NETWORK[network];
-    const presets = presetsOfBuild(build);
+    // Every build of the network (a token keeps the build it launched on): one on-demand loader per preset name gives
+    // that preset's files of each build that has it.
+    const builds = BUILDS_OF_NETWORK[network];
+    const presetsOf = new Map(builds.map((b) => [b, presetsOfBuild(b)] as const));
+    const presets = [...new Set(builds.flatMap((b) => presetsOf.get(b)!))].sort();
+    const loadPreset = async (p: string): Promise<ArtifactChunk> => {
+      const out: Record<string, string> = {};
+      for (const b of builds) if (presetsOf.get(b)!.includes(p)) Object.assign(out, await loadChunk(entry, b, p));
+      return out;
+    };
     const loaders: Record<string, () => Promise<ArtifactChunk>> = {};
-    for (const p of presets) loaders[p] = () => loadChunk(entry, build, p);
+    for (const p of presets) loaders[p] = () => loadPreset(p);
     registerLazyArtifacts(loaders);
-    const base = await loadChunk(entry, build, 'base');
+    const pre: Record<string, string> = {};
+    for (const b of builds) Object.assign(pre, await loadChunk(entry, b, 'base'));
     const wanted = options.preload === 'all' ? presets : options.preload ?? [];
-    const pre: Record<string, string> = { ...base };
     for (const p of wanted) {
-      if (!presets.includes(p)) throw new ArtifactIntegrityError(p, `is not a preset of ${build}`);
-      Object.assign(pre, await loadChunk(entry, build, p));
+      if (!presets.includes(p)) throw new ArtifactIntegrityError(p, `is not a preset of ${builds.join(' or ')}`);
+      Object.assign(pre, await loadPreset(p));
     }
     installArtifactSource(artifactSourceFromFiles(pre));
   })();
@@ -229,7 +237,7 @@ export function initWebFor(entry: WebEntry, network: KassealNetwork, options: In
   return initWebWith(entry, network, options);
 }
 
-/** Refuse a chunk of any build but `entryBuild` (a per-network entry bundles only its own). */
-export function assertEntryBuild(build: string, entryBuild: string): void {
-  if (build !== entryBuild) throw new ArtifactIntegrityError(build, `is not bundled with the ${entryBuild} web entry`);
+/** Refuse a chunk of any build but `entryBuilds` (a per-network entry bundles only its network's). */
+export function assertEntryBuild(build: string, entryBuilds: readonly string[]): void {
+  if (!entryBuilds.includes(build)) throw new ArtifactIntegrityError(build, `is not bundled with the ${entryBuilds.join(' + ')} web entry`);
 }

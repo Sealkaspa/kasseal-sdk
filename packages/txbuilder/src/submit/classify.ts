@@ -8,6 +8,7 @@
  *   output (<id>, <i>) already spent by transaction <winner> in the mempool       lost-race, mempool-spent, winner named
  *   transaction <id> is an orphan where orphan is disallowed                      lost-race, orphan (stale head)
  *   transaction <id> is already in the mempool                                    already-in-mempool
+ *   transaction <id> was already accepted by the consensus                        already-in-mempool (the node has it)
  *   failed to verify the signature script: script units exceeded the amount
  *     committed in the input: used=N, limit=M                                     budget-too-low; the input is the one whose
  *                                                                                 budget b satisfies M = b * 10000 + 9999
@@ -51,6 +52,8 @@ const WRAPPER = new RegExp(`^(?:RPC Server \\(remote error\\) -> )?Rejected tran
 const MEMPOOL_SPENT = new RegExp(`^output \\(${ID}, (\\d+)\\) already spent by transaction ${ID} in the mempool$`);
 const ORPHAN = new RegExp(`^transaction ${ID} is an orphan where orphan is disallowed$`);
 const DUPLICATE = new RegExp(`^transaction ${ID} is already in the mempool$`);
+/** A re-sent transaction the network already accepted: it took effect once; not a failure. */
+const ALREADY_ACCEPTED = new RegExp(`^transaction ${ID} was already accepted by the consensus$`);
 const BUDGET = /^failed to verify the signature script: script units exceeded the amount committed in the input: used=(\d+), limit=(\d+)$/;
 const FEE = new RegExp(`^(?:transaction ${ID} is not standard: )?transaction has (\\d+) fees which is under the required amount of (\\d+) for (compute|normalized transient|storage) mass (\\d+)(?: \\(proportional to transaction byte size\\))?$`);
 const SCRIPT_FAILED = /^failed to verify the signature script: (?:script ran, but verification failed|false stack entry at end of script execution)$/;
@@ -80,6 +83,8 @@ export function classifyNodeRejection(error: unknown, context: ClassifyContext =
   if (orphan && orphan[1] === txid) return { kind: 'lost-race', txid, cause: 'orphan' };
   const duplicate = DUPLICATE.exec(body);
   if (duplicate && duplicate[1] === txid) return { kind: 'already-in-mempool', txid };
+  const accepted = ALREADY_ACCEPTED.exec(body);
+  if (accepted && accepted[1] === txid) return { kind: 'already-in-mempool', txid };
   const budget = BUDGET.exec(body);
   if (budget) {
     const used = Number(budget[1]);

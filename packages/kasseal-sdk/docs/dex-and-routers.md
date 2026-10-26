@@ -2,8 +2,8 @@
 
 Kasseal pool swaps are **composable**: a swap may share its transaction, and its token's KCC-20 transfer, with other
 covenants, such as another venue's pool, a router or an escrow. This page is for anyone who puts a Kasseal swap
-inside a transaction they design. It applies to the pools of both current builds, `v1-kasseal-mainnet-2` and its
-testnet-10 build (template hashes in [contract-artifacts.md](contract-artifacts.md)).
+inside a transaction they design. It applies to the pools of every current build (`v1-kasseal-mainnet-3` and `v1-kasseal-mainnet-2`
+share one pool program) and their testnet-10 builds (template hashes in [contract-artifacts.md](contract-artifacts.md)).
 
 If you only trade through the SDK's own transaction shapes, read [trading-bots.md](trading-bots.md) instead. The
 rules below still explain why the SDK does what it does.

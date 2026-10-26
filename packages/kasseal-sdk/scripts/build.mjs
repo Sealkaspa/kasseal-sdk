@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build @kassealhq/sdk into dist/: the artifact manifest and copies of the two bundled contract builds, the pinned
+// Build @kassealhq/sdk into dist/: the artifact manifest and copies of the bundled contract builds (two per network), the pinned
 // Kaspa SDK builds, the JavaScript bundles (no workspace dependencies, no comments) and the bundled declarations
 // (comments stripped, stable error codes declared). `--gen-only` writes only src/generated/ (for typechecking).
 import { createHash } from 'node:crypto';
@@ -15,7 +15,11 @@ const GEN = path.join(PKG, 'src', 'generated');
 const require = createRequire(import.meta.url);
 const genOnly = process.argv.includes('--gen-only');
 
-const BUILDS = Object.freeze({ 'v1-kasseal-mainnet-2': 'mainnet', 'v1-kasseal-mainnet-2-tn10': 'testnet-10' });
+// Per network: the launch build (Kasseal-mainnet-3, the creator window) and the one tokens launched before it keep.
+const BUILDS = Object.freeze({
+  'v1-kasseal-mainnet-3': 'mainnet', 'v1-kasseal-mainnet-2': 'mainnet',
+  'v1-kasseal-mainnet-3-tn10': 'testnet-10', 'v1-kasseal-mainnet-2-tn10': 'testnet-10',
+});
 const TOKEN_REFERENCE = 'codec/fixtures/argent-kcc20-reference-c8a0871.json';
 const TOKEN_REFERENCE_SOURCE = 'argent-lang/kcc20-reference@c8a0871 fixtures/public-mint/artifact.json';
 
@@ -181,7 +185,7 @@ writeFileSync(path.join(DIST, 'kaspa', 'sdk-types.d.ts'), "export type KaspaSdk 
 const esbuild = require('esbuild-wasm');
 const scrub = await import(pathToFileURL(path.join(PKG, 'scripts', 'scrub.mjs')).href);
 const KASPA_WEB = /sdk\/vendor\/web\/kaspa\/kaspa\.js$/;
-// The browser entries: `web` (both builds), one per network that reaches only its own build's artifact chunks, and
+// The browser entries: `web` (every build), one per network that reaches only its own builds' artifact chunks, and
 // one per network without the bundled Kaspa SDK (`web-lite-*`, for apps that pass their own).
 const WEB_ENTRIES = {
   web: 'src/web.ts', 'web-mainnet': 'src/web-mainnet.ts', 'web-testnet-10': 'src/web-testnet-10.ts',

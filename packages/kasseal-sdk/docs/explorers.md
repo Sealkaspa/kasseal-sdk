@@ -41,8 +41,8 @@ New launches arrive live on the stream (`wss://app.kasseal.com/v1/stream` on mai
 | Program | Template hash |
 |---|---|
 | Token (T and L): KCC-20 reference | `9703112ee6e3555107cd168858992b77d3b74f655205b2b463b1f9ec2ec73cf7` |
-| Pool, testnet-10 (`v1-kasseal-mainnet-2-tn10`) | `28170395ca9350966c0d732ffce8b13c5a94201e74552b7add67143a35dea56a` |
-| Pool, mainnet (`v1-kasseal-mainnet-2`) | `92acd761504e4fa05acf70675ef1aea0c66efa2126ec5c726e4779b8aef054e0` |
+| Pool, testnet-10 (`v1-kasseal-mainnet-3-tn10` and `v1-kasseal-mainnet-2-tn10`) | `28170395ca9350966c0d732ffce8b13c5a94201e74552b7add67143a35dea56a` |
+| Pool, mainnet (`v1-kasseal-mainnet-3` and `v1-kasseal-mainnet-2`) | `92acd761504e4fa05acf70675ef1aea0c66efa2126ec5c726e4779b8aef054e0` |
 
 **Curves have no single hash.** The creator's payout key is a constant of the curve program, so every creator's curve
 has its own template hash. Identify a curve by its token's launch proof. Alternatively, match the curve program with

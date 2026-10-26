@@ -25,8 +25,11 @@ test('initWeb installs the SDK and the network\'s artifacts; presets load on dem
   assert.throws(() => w.createContext('standard-k180', 'testnet-10'), (e) => e.code === 'ARTIFACT_NOT_LOADED');
   await w.ensurePresetArtifacts('standard-k180');
   const ctx = w.createContext('standard-k180', 'testnet-10');
-  assert.equal(ctx.curve.templateHash, w.artifactManifest.builds['v1-kasseal-mainnet-2-tn10'].presets['standard-k180']);
-  assert.equal(ctx.pool.templateHash, w.artifactManifest.builds['v1-kasseal-mainnet-2-tn10'].poolTemplateHash);
+  // The launch build by default (the creator window); the earlier build's preset loaded with it.
+  assert.equal(ctx.curve.templateHash, w.artifactManifest.builds['v1-kasseal-mainnet-3-tn10'].presets['standard-k180']);
+  assert.equal(ctx.pool.templateHash, w.artifactManifest.builds['v1-kasseal-mainnet-3-tn10'].poolTemplateHash);
+  const earlier = w.createContext('standard-k180', 'testnet-10', 'v1', 'v1-kasseal-mainnet-2-tn10');
+  assert.equal(earlier.curve.templateHash, w.artifactManifest.builds['v1-kasseal-mainnet-2-tn10'].presets['standard-k180']);
   assert.throws(() => w.createContext('standard', 'mainnet'), (e) => e.code === 'ARTIFACT_MISSING', 'only the initialised network is installed');
   await assert.rejects(w.initWeb({ network: 'mainnet', wasm }), /already ran/);
 });
@@ -78,7 +81,7 @@ test('initWeb accepts the pinned build supplied by the caller (wasm and digest g
     const ms = performance.now() - t0;
     out.push(w.sdk().version(), w.sdk().Transaction === kaspa.Transaction, ms);
     await w.ensurePresetArtifacts('standard-k180');
-    out.push(w.createContext('standard-k180', 'testnet-10').curve.templateHash === w.artifactManifest.builds['v1-kasseal-mainnet-2-tn10'].presets['standard-k180']);
+    out.push(w.createContext('standard-k180', 'testnet-10').curve.templateHash === w.artifactManifest.builds['v1-kasseal-mainnet-3-tn10'].presets['standard-k180']);
   `);
   assert.equal(result, 'ok');
   assert.equal(version, '2.1.0');
@@ -150,7 +153,7 @@ test('a lite entry bundles no Kaspa SDK: initWeb requires kaspa, then runs on th
     try { w.initWeb({ network: 'testnet-10', kaspa: { module: kaspa, wasm } }); out.push('no throw'); } catch (e) { out.push(e.code); }
     out.push(await outcome(w.initWeb({ kaspa: { module: kaspa, wasm } })), w.sdk().version(), w.sdk().Transaction === kaspa.Transaction, 'webWasmUrl' in w);
     await w.ensurePresetArtifacts('standard-k180');
-    out.push(w.createContext('standard-k180', 'mainnet').curve.templateHash === w.artifactManifest.builds['v1-kasseal-mainnet-2'].presets['standard-k180']);
+    out.push(w.createContext('standard-k180', 'mainnet').curve.templateHash === w.artifactManifest.builds['v1-kasseal-mainnet-3'].presets['standard-k180']);
   `, 'web-lite-mainnet.js');
   assert.match(missing, /^TypeError: .*bundles no Kaspa SDK/);
   assert.equal(refusedOther, 'UNSUPPORTED_NETWORK');

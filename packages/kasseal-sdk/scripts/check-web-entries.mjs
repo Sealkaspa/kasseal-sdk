@@ -11,14 +11,14 @@ import { CheckFailed, PKG, fail } from './lib.mjs';
 /** Browser entry file -> the builds whose artifact chunks it may reach (null: every bundled build). */
 export const WEB_ENTRIES = Object.freeze({
   'web.js': null,
-  'web-mainnet.js': ['v1-kasseal-mainnet-2'],
-  'web-testnet-10.js': ['v1-kasseal-mainnet-2-tn10'],
-  'web-lite-mainnet.js': ['v1-kasseal-mainnet-2'],
-  'web-lite-testnet-10.js': ['v1-kasseal-mainnet-2-tn10'],
+  'web-mainnet.js': ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-3'],
+  'web-testnet-10.js': ['v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-3-tn10'],
+  'web-lite-mainnet.js': ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-3'],
+  'web-lite-testnet-10.js': ['v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-3-tn10'],
 });
 /** Entries that bundle no Kaspa SDK: they must reach neither `kaspa.js` nor reference `kaspa_bg.wasm` as a file. */
 export const LITE_ENTRIES = Object.freeze(['web-lite-mainnet.js', 'web-lite-testnet-10.js']);
-const BUILDS = ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10'];
+const BUILDS = ['v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-3', 'v1-kasseal-mainnet-3-tn10'];
 const IMPORT = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(["'])(\.{1,2}\/[^"']+)\1/g;
 
 /** The files reachable from `entry` (relative to `dist`), with their sizes. */

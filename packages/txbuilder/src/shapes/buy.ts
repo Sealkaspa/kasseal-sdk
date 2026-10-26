@@ -23,11 +23,17 @@
  *
  * Refused (`ProofNotBound`) unless the caller's launch-proof verdict is `bound`:
  * C's singleton is an off-chain proof obligation.
+ *
+ * Creator window (a curve whose build has it, `hasCreatorWindow`): on a curve nothing has traded on (lotsSold 0,
+ * feeAccrued 0), a buy whose first funding input is not the creator's (`creatorSpk`) carries sequence
+ * `CREATOR_WINDOW_DAA` on its curve input; consensus refuses it until the curve cell is that many DAA old. The creator's
+ * own buy carries none and is valid at once.
  */
 
 import { BORROW_AMOUNT_THRESHOLD, thresholdGuard, type TokenState } from '@kasseal/codec';
 import { buyQuote, type Quote } from '@kasseal/curve-math';
-import { p2pkScript, type CurveCell, type FundingUtxo, type Outpoint, type TokenCell, type TxPlan } from '../assemble.ts';
+import { p2pkScript, versionedSpk, type CurveCell, type FundingUtxo, type Outpoint, type TokenCell, type TxPlan } from '../assemble.ts';
+import { CREATOR_WINDOW_DAA, hasCreatorWindow } from '../artifacts.ts';
 import { budgetsOf, changeTo, curveInput, curveOutput, kasInput, tokenLeaderCovenantInput, tokenOutput, type BuilderContext } from '../cells.ts';
 import { BUDGETS } from '../mass.ts';
 import { PHASE_ACTIVE, covenantOwnedToken, userToken, type CurveState } from '../program.ts';
@@ -102,6 +108,25 @@ export function buyPrecheck(ctx: BuilderContext, curve: CurveCell, n: bigint, ma
   return quote;
 }
 
+/** Whether `funding`'s first input is the curve's creator (`creatorSpk`): what the creator window checks (input 2). */
+export function fundedByCreator(ctx: BuilderContext, funding: readonly FundingUtxo[]): boolean {
+  const first = funding[0];
+  if (first === undefined) return false;
+  const a = versionedSpk(first.spk);
+  const b = ctx.curve.params.creatorSpk;
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
+
+/**
+ * The creator window's sequence for a buy's curve input: `{ sequence: CREATOR_WINDOW_DAA }` when the curve's build has
+ * the window, nothing has traded on it and the buy is not funded by the creator; else nothing (sequence 0).
+ */
+export function curveBuySequence(ctx: BuilderContext, curve: CurveCell, funding: readonly FundingUtxo[]): { sequence?: bigint } {
+  if (!hasCreatorWindow(ctx.curve)) return {};
+  if (curve.state.lotsSold !== 0n || curve.state.feeAccrued !== 0n) return {};
+  return fundedByCreator(ctx, funding) ? {} : { sequence: CREATOR_WINDOW_DAA };
+}
+
 /**
  * Build a curve buy of `n` lots. Refuses (throws) a verdict other than `bound`, `borrowInto`, an inactive curve, a lineage
  * other than `tokenId`, a quote above `maxKasIn`, and an all-in cost above `maxAllIn`.
@@ -132,7 +157,7 @@ export function buildBuy(params: BuyParams): BuyResult {
   const plan: TxPlan = {
     name: `buy(${n})`,
     inputs: [
-      curveInput(curve, `CURVE buy(${n}, user)`, budgetsOf(ctx).curveBuy, curveBuySigScript(ctx.curve, curve.program, n, kcc20Full(userNext, ctx.token.templateHash))),
+      { ...curveInput(curve, `CURVE buy(${n}, user)`, budgetsOf(ctx).curveBuy, curveBuySigScript(ctx.curve, curve.program, n, kcc20Full(userNext, ctx.token.templateHash))), ...curveBuySequence(ctx, curve, funding) },
       tokenLeaderCovenantInput(supply, [restNext, userNext], 'KCC20 supply cell (T leader, witness 00)', BUDGETS.tokenLeaderCovenant2Out),
       ...funding.map((u) => kasInput(u, 'buyer KAS')),
     ],

@@ -1,9 +1,10 @@
 // Fixed, fake inputs for the byte-parity check: a curve buy, a curve sell, a pool buy, a pool sell, an add and a
-// remove of liquidity, and a fee claim (curve and pool sweeps through the asynchronous builder), on both bundled
-// builds. `B` is a module namespace (the published Node entry, or the in-repository sources). No network access.
+// remove of liquidity, and a fee claim (curve and pool sweeps through the asynchronous builder), on every bundled
+// build; and the first buy of a fresh curve by someone other than the creator (the creator window's sequence on the
+// Kasseal-mainnet-3 builds, none on Kasseal-mainnet-2's). `B` is a module namespace (the published Node entry, or the in-repository sources). No network access.
 
-export const SCENARIOS = Object.freeze(['curve buy', 'curve sell', 'pool buy', 'pool sell', 'add liquidity', 'remove liquidity', 'claim curve', 'claim pool']);
-export const PARITY_NETWORKS = Object.freeze([['mainnet', 'v1-kasseal-mainnet-2'], ['testnet-10', 'v1-kasseal-mainnet-2-tn10']]);
+export const SCENARIOS = Object.freeze(['curve first buy', 'curve buy', 'curve sell', 'pool buy', 'pool sell', 'add liquidity', 'remove liquidity', 'claim curve', 'claim pool']);
+export const PARITY_NETWORKS = Object.freeze([['mainnet', 'v1-kasseal-mainnet-3'], ['mainnet', 'v1-kasseal-mainnet-2'], ['testnet-10', 'v1-kasseal-mainnet-3-tn10'], ['testnet-10', 'v1-kasseal-mainnet-2-tn10']]);
 
 const KAS = 100_000_000n;
 const SCALE = 1_000_000n;
@@ -33,8 +34,11 @@ export async function scenario(B) {
     const raise = (lots) => B.buyQuote(B.launchPresetOf(ctx.curve).curve, 0n, lots).cost;
     const rec = (name, shaped) => {
       const built = B.toBuilt(shaped);
-      out[`${network} ${name}`] = { txid: built.txid, txJson: built.txJson };
+      out[`${build} ${name}`] = { txid: built.txid, txJson: built.txJson };
     };
+
+    // The first buy of a fresh curve, not funded by the creator (the preset's placeholder creator is not this key).
+    rec('curve first buy', B.buildBuy({ proofVerdict: 'bound', ctx, curve: curveCell(0n, 0n, 5n * KAS), supply: supply(0n), buyer: { xOnlyPubkey: xonly, address }, n: 5n, funding: [funding(100n * KAS, 0x45)] }));
 
     // Curve buy and sell.
     rec('curve buy', B.buildBuy({ proofVerdict: 'bound', ctx, curve: curveCell(1_000n, 5_000n, 5n * KAS + raise(1_000n) + 5_000n), supply: supply(1_000n), buyer: { xOnlyPubkey: xonly, address }, n: 30n, funding: [funding(100n * KAS, 0x44)] }));
@@ -91,7 +95,7 @@ export async function scenario(B) {
     ]);
     if (plan.plans.length !== 2) throw new Error(`claim plan: ${plan.plans.length} claims, expected 2`);
     const claims = await B.buildClaims((q) => builder.buildSweep(q), plan.plans, address);
-    for (const c of claims.claims) out[`${network} claim ${c.plan.cell.venue}`] = { txid: c.tx.txid, txJson: c.tx.txJson };
+    for (const c of claims.claims) out[`${build} claim ${c.plan.cell.venue}`] = { txid: c.tx.txid, txJson: c.tx.txJson };
   }
   return out;
 }

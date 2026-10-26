@@ -82,7 +82,7 @@ export function poolRoundingOf(ctx: BuilderContext): PlatformRounding {
  * Frozen v1 revisions whose pool rounds the platform share to the nearest unit, including `v1-kasseal-mainnet-2` and
  * its testnet-10 build.
  */
-export const V1_NEAREST_ROUNDING_REVISIONS: readonly string[] = Object.freeze(['v1-2026-10-18-final', 'v1-kasseal-mainnet-tn10', 'v1-kasseal-mainnet', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-2']);
+export const V1_NEAREST_ROUNDING_REVISIONS: readonly string[] = Object.freeze(['v1-2026-10-18-final', 'v1-kasseal-mainnet-tn10', 'v1-kasseal-mainnet', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-3-tn10', 'v1-kasseal-mainnet-3']);
 
 /** How a pool template rounds the platform share: nearest for the current v1 build and `V1_NEAREST_ROUNDING_REVISIONS`, floor otherwise. */
 export function poolTemplateRounding(pool: Pick<PoolTemplate, 'version' | 'revision'>): PlatformRounding {

@@ -1,0 +1,28 @@
+{
+ "note": "Reduced copy of the frozen build manifest: the fields the SDK build reads, for the compiled artifacts in this directory (every digest and template hash unchanged).",
+ "set": "kasseal-pool",
+ "version": "v1",
+ "revision": "kasseal-mainnet-3",
+ "frozen": "2026-10-26",
+ "network": "mainnet",
+ "compiler": {
+  "name": "silverc",
+  "tag": "v1.0.0",
+  "commit": "3ed973335b59269293564805cc2c58a14595ec03"
+ },
+ "artifact": "pool.artifact.json",
+ "ctor": "pool.ctor.json",
+ "stateSpan": {
+  "offset": 1,
+  "length": 139
+ },
+ "constructorValues": 9,
+ "treasuryAddress": "kaspa:qrt0p8sd5g8k383mzxgqtyl7ehkdez8ds8cpxqcuwjdaayke9rjhg9pqnr3zx",
+ "treasurySpk": "000020d6f09e0da20f689e3b11900593fecdecdc88ed81f013031c749bde92d928e574ac",
+ "templateHash": "92acd761504e4fa05acf70675ef1aea0c66efa2126ec5c726e4779b8aef054e0",
+ "bytecodeBytes": 15197,
+ "sha256": {
+  "pool.artifact.json": "7ae79b8a9a36e6b7469dc7fe1d8bd3cc227abe94632e3fe1e36cfcebcb1cccb2",
+  "pool.ctor.json": "d2e5abb2350d1f5e7657aca91e5af4ab05b4e42004fe26a2acee956e359afbae"
+ }
+}

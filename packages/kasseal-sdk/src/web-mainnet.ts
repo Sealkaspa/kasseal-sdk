@@ -1,6 +1,6 @@
 /**
  * Browser entry for mainnet only: the same API as `./web`, but its import graph reaches only the artifact chunks of
- * the mainnet contract build (v1-kasseal-mainnet-2), so a bundler or extension packager ships no other network's
+ * the mainnet contract builds (v1-kasseal-mainnet-3, v1-kasseal-mainnet-2), so a bundler or extension packager ships no other network's
  * chunks. `initWeb` takes no network, or refuses any other one. Keep in step with `web-testnet-10.ts`.
  */
 import initWasm, * as kaspaWeb from '../../sdk/vendor/web/kaspa/kaspa.js';
@@ -17,8 +17,10 @@ export const WEB_JS_SHA256: string = kaspaSdkDigests['web/kaspa.js']!;
 
 /** The network this entry serves. */
 export const WEB_NETWORK = 'mainnet';
-/** The contract build this entry bundles. */
-export const WEB_BUILD = 'v1-kasseal-mainnet-2';
+/** The contract build new launches use on this network. */
+export const WEB_BUILD = 'v1-kasseal-mainnet-3';
+/** The contract builds this entry bundles (a token keeps the build it launched on). */
+export const WEB_BUILDS: readonly string[] = Object.freeze(['v1-kasseal-mainnet-3', 'v1-kasseal-mainnet-2']);
 
 /** Where the bundled web `kaspa_bg.wasm` is served from (a URL next to this module that bundlers can rewrite). */
 export function webWasmUrl(): URL {
@@ -46,10 +48,10 @@ export interface InitWebOptions {
 
 const entry: WebEntry = {
   bundled: { initWasm, kaspa: kaspaWeb, wasmUrl: webWasmUrl },
-  // The build is spelled out so the bundled import graph holds only this build's chunks.
   importChunk: async (build, name) => {
-    assertEntryBuild(build, WEB_BUILD);
-    return import(`./generated/web/v1-kasseal-mainnet-2--${name}.js`);
+    assertEntryBuild(build, WEB_BUILDS);
+    // Each build spelled out, so the bundled import graph holds only this network's chunks.
+    return build === 'v1-kasseal-mainnet-3' ? import(`./generated/web/v1-kasseal-mainnet-3--${name}.js`) : import(`./generated/web/v1-kasseal-mainnet-2--${name}.js`);
   },
 };
 

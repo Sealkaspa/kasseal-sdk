@@ -33,7 +33,7 @@ The package is bundled from a few workspace packages, kept at their own paths so
 | `packages/curve-math/src` | Exact bigint arithmetic for the curve, graduation and the pool |
 | `packages/api-types/src` | Types of the public Kasseal API |
 | `packages/sdk` | The pinned rusty-kaspa v2.1.0 WASM SDK (Node and web builds) with its SHA-256 sums |
-| `packages/contracts` | The compiled contract artifacts of the two bundled builds, `v1-kasseal-mainnet-2` and `v1-kasseal-mainnet-2-tn10` |
+| `packages/contracts` | The compiled contract artifacts of the four bundled builds: `v1-kasseal-mainnet-3` (launch build) and `v1-kasseal-mainnet-2` on mainnet, `v1-kasseal-mainnet-3-tn10` and `v1-kasseal-mainnet-2-tn10` on testnet-10 |
 | `packages/codec/fixtures` | The compiled KCC-20 reference token program |
 
 Only the workspace packages' sources that the published package is built from are here.

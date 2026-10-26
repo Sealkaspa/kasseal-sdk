@@ -115,7 +115,7 @@ export const TOKEN_REFERENCE = 'codec/fixtures/argent-kcc20-reference-c8a0871.js
  * cell (`isComposablePool`). The other entries are earlier builds, listed so cells of those builds still decode when
  * their artifacts are available.
  */
-export const V1_FROZEN_REVISIONS: readonly string[] = Object.freeze(['v1-2026-10-18-final', 'v1-kasseal-mainnet-tn10', 'v1-kasseal-mainnet', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-2']);
+export const V1_FROZEN_REVISIONS: readonly string[] = Object.freeze(['v1-2026-10-18-final', 'v1-kasseal-mainnet-tn10', 'v1-kasseal-mainnet', 'v1-kasseal-mainnet-2-tn10', 'v1-kasseal-mainnet-2', 'v1-kasseal-mainnet-3-tn10', 'v1-kasseal-mainnet-3']);
 
 /**
  * An earlier mainnet build, frozen and never launched on; mainnet launches use `V1_COMPOSABLE_REVISION`. Testnets never
@@ -124,12 +124,33 @@ export const V1_FROZEN_REVISIONS: readonly string[] = Object.freeze(['v1-2026-10
 export const V1_MAINNET_REVISION = 'v1-kasseal-mainnet';
 /** The testnet-10 build of `V1_MAINNET_REVISION` (same sources, the testnet company P2PK as treasury). */
 export const V1_MAINNET_TWIN_REVISION = 'v1-kasseal-mainnet-tn10';
-/** The mainnet build every mainnet launch uses: the v1 contracts with composable pool swaps. */
+/** The mainnet build with composable pool swaps; mainnet launched on it until 2026-10-26 (now `V1_CREATOR_WINDOW_REVISION`). */
 export const V1_COMPOSABLE_REVISION = 'v1-kasseal-mainnet-2';
 /** The testnet-10 build of `V1_COMPOSABLE_REVISION` (the same sources, the testnet company P2PK as the treasury). */
 export const V1_COMPOSABLE_TWIN_REVISION = 'v1-kasseal-mainnet-2-tn10';
+/**
+ * Kasseal-mainnet-3 (frozen 2026-10-26): Kasseal-mainnet-2's sources with the creator
+ * window in the curve's `buy`, the same pool. New mainnet launches use it.
+ */
+export const V1_CREATOR_WINDOW_REVISION = 'v1-kasseal-mainnet-3';
+/** The testnet-10 build of `V1_CREATOR_WINDOW_REVISION` (the same sources, the testnet company P2PK). New testnet-10 launches use it. */
+export const V1_CREATOR_WINDOW_TWIN_REVISION = 'v1-kasseal-mainnet-3-tn10';
+/** The revisions whose curve has the creator window (`hasCreatorWindow`). */
+export const V1_CREATOR_WINDOW_REVISIONS: readonly string[] = Object.freeze([V1_CREATOR_WINDOW_REVISION, V1_CREATOR_WINDOW_TWIN_REVISION]);
+/**
+ * The creator window's length in DAA-score units (`CREATOR_WINDOW_DAA` in the curve, about 20 s at 10 blocks per
+ * second): on a curve nothing has traded on, a buy not funded by the creator is valid only once the curve cell is this
+ * old, so its curve input carries this sequence.
+ */
+export const CREATOR_WINDOW_DAA = 200n;
+
+/** Whether a curve template's build has the creator window. */
+export function hasCreatorWindow(curve: { readonly revision?: string | undefined }): boolean {
+  return curve.revision !== undefined && V1_CREATOR_WINDOW_REVISIONS.includes(curve.revision);
+}
+
 /** The revisions compiled for mainnet (their manifests say `"network": "mainnet"`); every other revision is a testnet build. */
-export const V1_MAINNET_REVISIONS: readonly string[] = Object.freeze([V1_MAINNET_REVISION, V1_COMPOSABLE_REVISION]);
+export const V1_MAINNET_REVISIONS: readonly string[] = Object.freeze([V1_MAINNET_REVISION, V1_COMPOSABLE_REVISION, V1_CREATOR_WINDOW_REVISION]);
 const MAINNET = 'mainnet';
 
 /** The non-current v1 revisions a network recognises: the mainnet revisions on mainnet, every other one elsewhere. */
@@ -141,13 +162,13 @@ export function v1RevisionsOn(networkId: string): readonly string[] {
 const TESTNET_10 = 'testnet-10';
 
 /**
- * The revision a new launch uses on a network unless the caller names one: `v1-kasseal-mainnet-2` on mainnet,
- * `v1-kasseal-mainnet-2-tn10` on testnet-10, the current build (undefined) elsewhere. Tokens launched on an earlier
+ * The revision a new launch uses on a network unless the caller names one: `v1-kasseal-mainnet-3` (the creator window)
+ * on mainnet, its testnet-10 build `v1-kasseal-mainnet-3-tn10` on testnet-10, the current build (undefined) elsewhere. Tokens launched on an earlier
  * build keep it for life.
  */
 export function launchRevisionOf(networkId: string): string | undefined {
-  if (networkId === MAINNET) return V1_COMPOSABLE_REVISION;
-  return networkId === TESTNET_10 ? V1_COMPOSABLE_TWIN_REVISION : undefined;
+  if (networkId === MAINNET) return V1_CREATOR_WINDOW_REVISION;
+  return networkId === TESTNET_10 ? V1_CREATOR_WINDOW_TWIN_REVISION : undefined;
 }
 
 function assertRevision(version: ContractSet, revision: string): string {

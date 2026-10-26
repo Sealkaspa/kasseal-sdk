@@ -23,8 +23,8 @@ Changes to these happen only in a minor release, listed in the CHANGELOG:
 - **Error codes**: the `code` string of every error class in [docs/errors.md](docs/errors.md). A code is never reused
   for a different meaning.
 - **The launch-proof verdicts**: `bound`, `unverified`, `invalid`, `malformed`, and what each means.
-- **The bundled contract builds**: `v1-kasseal-mainnet-2` and `v1-kasseal-mainnet-2-tn10`, their artifacts and
-  their hashes. A new contract build is added in a minor release; a bundled build is never modified.
+- **The bundled contract builds**: `v1-kasseal-mainnet-3`, `v1-kasseal-mainnet-2` and their testnet-10 builds
+  `v1-kasseal-mainnet-3-tn10`, `v1-kasseal-mainnet-2-tn10`, their artifacts and their hashes. A new contract build is added in a minor release; a bundled build is never modified.
 - **Entry points**: `@kassealhq/sdk`, `@kassealhq/sdk/node`, `@kassealhq/sdk/web`, `@kassealhq/sdk/web/mainnet`,
   `@kassealhq/sdk/web/testnet-10`, `@kassealhq/sdk/web-lite/mainnet`, `@kassealhq/sdk/web-lite/testnet-10`.
 

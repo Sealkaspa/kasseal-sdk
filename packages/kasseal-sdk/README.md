@@ -115,13 +115,23 @@ The complete program, with the safe retry, is [examples/pool-buy.ts](examples/po
 
 ## Networks
 
-| Network | Network id | API base URL | Contract build | Status |
+| Network | Network id | API base URL | Contract builds | Status |
 |---|---|---|---|---|
-| Kaspa mainnet | `mainnet` | `https://app.kasseal.com/v1` | `v1-kasseal-mainnet-2` | Live |
-| Kaspa testnet-10 | `testnet-10` | `https://testnet.kasseal.com/v1` | `v1-kasseal-mainnet-2-tn10` | Live |
+| Kaspa mainnet | `mainnet` | `https://app.kasseal.com/v1` | `v1-kasseal-mainnet-3` (new launches), `v1-kasseal-mainnet-2` | Live |
+| Kaspa testnet-10 | `testnet-10` | `https://testnet.kasseal.com/v1` | `v1-kasseal-mainnet-3-tn10` (new launches), `v1-kasseal-mainnet-2-tn10` | Live |
 
-The testnet build mirrors the mainnet build: the same contract sources, with Kasseal's testnet wallet as the fee
-recipient. Template hashes for both are in [docs/contract-artifacts.md](docs/contract-artifacts.md).
+A token keeps the build it was launched on, and the SDK trades both: it recognises a token's build from its curve or
+pool program. The two builds share one pool program; the newer curve adds the creator window (below). Each testnet
+build mirrors its mainnet build: the same contract sources, with Kasseal's testnet wallet as the fee recipient.
+
+### The creator window
+
+On a curve of `v1-kasseal-mainnet-3` that nothing has traded on yet, only a buy funded by the token's creator (the
+transaction's first funding input pays from the creator's key) is valid until the curve is 200 DAA (about 20 seconds)
+old. Anyone else's first buy must carry that age on its curve input, and the network holds it back until then. Once
+anything has traded, buys are unrestricted. The builders do this for you: `buildBuy` sets the curve input's sequence
+to `CREATOR_WINDOW_DAA` when the window applies (`curveBuySequence`); a submit inside the window is refused by the
+node and can be sent again once the window has passed. `hasCreatorWindow(ctx.curve)` tells whether a curve has it. Template hashes for both are in [docs/contract-artifacts.md](docs/contract-artifacts.md).
 
 ## What a trade costs
 

@@ -10,7 +10,7 @@
 // Errors first: the stable codes are installed on the error classes when this module loads.
 export { ERROR_CODES, errorCode, isKassealError } from './errors.ts';
 export {
-  API_BASE_URLS, BUILD_OF_NETWORK, NETWORKS, SUPPORTED_BUILDS, UnsupportedBuild, UnsupportedNetwork, assertNetwork, buildOf, createContext, createTxBuilder, isKassealNetwork,
+  API_BASE_URLS, BUILD_OF_NETWORK, BUILDS_OF_NETWORK, NETWORKS, SUPPORTED_BUILDS, UnsupportedBuild, UnsupportedNetwork, assertNetwork, buildOf, createContext, createTxBuilder, isKassealNetwork,
   type KassealNetwork, type PublicTxBuilder, type TxBuilderOptions,
 } from './networks.ts';
 export {
@@ -78,8 +78,9 @@ export { createDefaultRegistry } from '../../codec/src/index.ts';
 /* ------------------------------------------------------------------ */
 
 export {
-  ArtifactMissing, ArtifactNotLoaded, ArtifactSourceNotInstalled, BUILDER_CONTRACT_SETS, ContractSetNotSupported, DEFAULT_CONTRACT_SET, V1_COMPOSABLE_REVISION, V1_COMPOSABLE_TWIN_REVISION,
-  ensurePresetArtifacts, hasOpenLiquidity, launchRevisionOf, presetArtifactsPending,
+  ArtifactMissing, ArtifactNotLoaded, ArtifactSourceNotInstalled, BUILDER_CONTRACT_SETS, CREATOR_WINDOW_DAA, ContractSetNotSupported, DEFAULT_CONTRACT_SET, V1_COMPOSABLE_REVISION, V1_COMPOSABLE_TWIN_REVISION,
+  V1_CREATOR_WINDOW_REVISION, V1_CREATOR_WINDOW_TWIN_REVISION,
+  ensurePresetArtifacts, hasCreatorWindow, hasOpenLiquidity, launchRevisionOf, presetArtifactsPending,
   type ArtifactSource, type BuilderContractSet, type PoolTemplateSet,
 } from '../../txbuilder/src/artifacts.ts';
 export {

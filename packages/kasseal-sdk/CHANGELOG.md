@@ -2,6 +2,36 @@
 
 All notable changes to `@kassealhq/sdk`. The versioning rules are in [STABILITY.md](STABILITY.md).
 
+## 0.3.0
+
+**The creator window (new contract builds)**
+
+- New launch builds `v1-kasseal-mainnet-3` (mainnet) and `v1-kasseal-mainnet-3-tn10` (testnet-10). Their curve's `buy`
+  has the creator window: on a curve nothing has traded on, only a buy funded by the token's creator is valid until
+  the curve is 200 DAA (about 20 seconds) old. The creator's own first buy is therefore always first; after the first
+  trade, buys are unrestricted. The pool program is the same file as in the earlier builds, byte for byte.
+- Both builds of each network are bundled: tokens launched before keep trading on `v1-kasseal-mainnet-2` and
+  `v1-kasseal-mainnet-2-tn10`. The builders recognise a token's build from its curve or pool program, as before.
+- `buildBuy` sets the curve input's sequence to `CREATOR_WINDOW_DAA` (200) when the window applies to the buyer
+  (`curveBuySequence`; the creator, read from the first funding input, needs none). A buy submitted inside the window
+  is refused by the node and can be sent again once the window has passed.
+
+**API**
+
+- `BUILD_OF_NETWORK` now names each network's launch build (`v1-kasseal-mainnet-3`, `v1-kasseal-mainnet-3-tn10`).
+  New `BUILDS_OF_NETWORK` lists every build of a network, launch build first; `SUPPORTED_BUILDS` lists all four.
+- `createContext(preset, network, 'v1', build)` accepts either build of the network; the default is the launch build.
+  `createTxBuilder` accepts contexts of either.
+- New exports: `CREATOR_WINDOW_DAA`, `hasCreatorWindow`, `curveBuySequence`, `fundedByCreator`,
+  `V1_CREATOR_WINDOW_REVISION`, `V1_CREATOR_WINDOW_TWIN_REVISION`.
+- The per-network browser entries load both builds of their network and add `WEB_BUILDS`; `WEB_BUILD` is the launch
+  build.
+
+**What to do**
+
+- Code that compared `BUILD_OF_NETWORK` or `WEB_BUILD` with a token's build: use `BUILDS_OF_NETWORK` / `WEB_BUILDS`.
+- Code that builds its own curve buys without `buildBuy`: set the curve input's sequence as `curveBuySequence` returns.
+
 ## 0.2.0
 
 **Entry points**
