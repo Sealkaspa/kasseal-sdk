@@ -13,11 +13,13 @@ The SDK gives you:
 - **Transaction builders** for curve buys and sells, pool swaps (including composable swap-and-deposit and
   script-owned sells), adding and removing liquidity, and fee payouts.
 - **Launch-proof verification**, so you can prove a token, its curve and its pool are genuine before you trade.
+- **Token locks**: decode and verify a lock, compute what it releases and when, build its creation and its claims.
 - **Submission helpers** for the races every UTXO venue has: build on the pending tip, retry without trading twice.
 - **Wallet adapters** for KasWare, Kastle and Kaspire.
 - **API types** for the public Kasseal REST API.
 
-Version 0.1.0 is a 0.x release: see [STABILITY.md](STABILITY.md) before you depend on it.
+Version 1.0 is the first stable release: its public API follows semantic versioning, as set out in
+[STABILITY.md](STABILITY.md).
 
 ## Install
 
@@ -154,6 +156,119 @@ node and can be sent again once the window has passed. `hasCreatorWindow(ctx.cur
 - **Units.** Token amounts are whole tokens (0 decimals). Curve trades are in whole lots (1,000 tokens on most
   tokens, 10,000 on tokens launched at high KAS prices). Pool KAS legs are whole multiples of 0.01 KAS.
 
+## Wallets: adding your partner tag
+
+Wallet partners' trades are recognised by a 6-byte partner tag in the transaction's payload: `4B 53 01`, the partner
+id (u16, big-endian), the channel (u8). Tagged trades are credited to the partner under its partner agreement with
+Kasseal. Partner ids are assigned by Kasseal.
+
+- **Connected trades** (channel 1, extension; channel 2, WalletConnect): the Kasseal website adds the tag. The wallet
+  only has to sign the transaction with its payload unchanged; it must never strip or rewrite the payload.
+- **In-wallet trades** (channel 3): a swap inside the wallet's own app adds the tag itself. Pass `partner` to
+  `buildBuy`, `buildSell`, `buildSwap` or `buildScriptSell` (or `partnerTag` to the synchronous shapes):
+
+```ts
+import { encodePartnerTag, decodePartnerTagHex, type PartnerTag } from '@kassealhq/sdk/web';
+
+const partner: PartnerTag = { partner: 1, channel: 3 };                 // your id, channel 3 (in-wallet)
+const built = await builder.buildSwap({ ...swap, partner });           // `swap`: the quickstart's parameters
+decodePartnerTagHex(JSON.parse(built.txJson).payload);                  // { partner: 1, channel: 3 }
+encodePartnerTag(partner);                                              // the 6 bytes, for your own builds
+```
+
+The full guide, with every builder, the hand-built payload and the checks, is
+[docs/partner-tag.md](docs/partner-tag.md).
+
+## Token locks
+
+A token lock holds KCC-20 tokens (or LP shares) for a fixed beneficiary and releases them on a fixed schedule. It is
+two covenants: the **lock** (lineage K, one per lock) and a stateless **lock factory** that creates it. One lock build
+serves mainnet and testnet-10 alike; it is bundled with the SDK and checked against its pinned SHA-256 like the trade
+builds.
+
+- **State** (140 bytes at offset 1): the token's covenant id, the beneficiary (a Schnorr key, scheme `0x00`, or a
+  script hash, scheme `0x03`), `total`, `claimed` (releases paid), `start`, `cliff`, `period` (Unix ms), `tranches`
+  N (1 to 100), `version` and `endCap`.
+- **Schedule.** Release k is due at `max(cliff, start + k × period)`. Tokens released by the first k releases:
+  `floor(k × total / N)`, so the remainder is spread one token at a time. The last release is due at
+  `lockEndOf(state)`.
+- **Deposit.** The lock holds exactly `N × 1.2 KAS + 1 KAS` (`lockDeposit(N)`): each release pays 1 KAS with the
+  tokens to the beneficiary and up to 0.2 KAS of network fee; the final release pays what is left to the beneficiary.
+  The lock's token cell carries 1 KAS more.
+
+**Read and verify.** `await loadLockSet()` gives the build (it loads the lock chunk on demand in the web entries).
+`lockProgramKind(set, program)` recognises a lock or factory program by its template hash, the state left out.
+`lockCellOf(set, cell)` re-derives a served lock cell from its own redeem script (template, well-formed state, K);
+`lockClaimableAt`, `lockNextUnlock`, `lockSchedule`, `lockVestedAt`, `lockRemaining` and `lockEndOf` compute the
+schedule exactly as the contract does. A covenant id is a Kasseal lock only if its genesis was authorised by a
+factory program through its `create` entry; the lock program alone does not prove that
+([explorers.md](docs/explorers.md)).
+
+**Create.** Two transactions, built together before either is signed (a txid does not depend on signatures):
+
+1. `buildLockPrep` funds the creator's factory cell (0.2 KAS) from the creator's KAS, with change back to the creator.
+2. `buildLockCreate` spends that factory cell, 1 to 3 of the creator's token cells and the prep's change into the
+   lock, the lock's token cell, the creator's rest (if any) and change. Send it once the prep is accepted.
+
+The creator must be a Schnorr P2PK address: the factory binds the creation to an input paying exactly the creator's
+script. The prep signs plain KAS inputs (`signBuiltWithKey` works); the create also signs the creator's token cells,
+which are P2SH slots: sign them through a wallet adapter, or with your own signer as described in
+[trading-bots.md](docs/trading-bots.md#7-signing-submitting-and-following-a-transaction).
+
+```ts
+import { buildLockCreate, buildLockPrep, loadLockSet, lockMinDurationMsOf, signBuiltWithKey } from '@kassealhq/sdk/node';
+
+const set = await loadLockSet();
+const prep = buildLockPrep({ set, creator, funding: kasUtxos });              // kasUtxos: the creator's FundingUtxo[]
+const change = { outpoint: { txid: prep.tx.txid, index: 1 }, amount: prep.built.outputs[1]!.value, spk: prep.built.outputs[1]!.spk, daaScore: 0n, address: creator };
+const lock = buildLockCreate({
+  set, creator, factory: { ...prep.factory, daaScore: 0n }, tokenCells,     // the creator's key-owned cells of the token
+  beneficiary: { kind: 'p2pk', xOnly: beneficiaryKey },
+  total: 1_000_000n, start: now, cliff: now, period: 30n * 86_400_000n, tranches: 4n, // four monthly releases
+  funding: [change], supply, now, minDurationMs: lockMinDurationMsOf('mainnet'),
+});
+// lock.lockId is K. Sign and send prep.tx, then lock.tx once the prep is accepted.
+```
+
+**Claim.** Anyone may claim; only the beneficiary is paid, and a claim has no signature. `buildLockClaim` pays every
+release vested at `now`, the claim's lock time in Unix ms. The network accepts a timestamp lock time only once the
+chain's past median time is above it (about two minutes behind the newest block), and rejects a claim with a later
+one: pass at most the past median time minus 1 (Kasseal's app uses the API's `nowMs` less 2 minutes). Nothing due
+throws `LockClaimNotDue` with `nextAt`. The final claim also pays the lock's remaining KAS to the beneficiary.
+
+```ts
+import { buildLockClaim, fromHex, lockCellOf, tokenStateFromJson } from '@kassealhq/sdk/node';
+
+const { nowMs, locks: [l] } = await (await fetch(`${API_BASE}/locks/${lockId}/cells`)).json();
+const c = l.lockCell;
+const lock = lockCellOf(set, { outpoint: c.outpoint, value: BigInt(c.amount), covenantId: c.covenantId, program: fromHex(c.redeemScript), daaScore: 0n });
+const t = l.tokenCell;
+const tCell = { kind: 'token', outpoint: t.outpoint, value: BigInt(t.amount), covenantId: t.covenantId, program: fromHex(t.redeemScript), state: tokenStateFromJson(t.state), daaScore: 0n } as const;
+const claim = buildLockClaim({ set, lock, tCell, now: BigInt(nowMs) - 120_000n });
+// claim.tx is complete: submit claim.tx.txJson as is.
+```
+
+Every builder re-checks its own transaction from its bytes before returning it (`checkLockCreateTx`,
+`checkLockClaimTx`, also exported for transactions you did not build) and refuses with `LockRefused` (`rule` says
+which). The beneficiary's `extend` (moving the schedule later) is not in this release.
+
+**Contract rules and Kasseal's rules.** The contracts pin the state, the deposit, the lock's token cell and the
+creation's layout; they know neither the token's supply nor the time of the creation. The builders add Kasseal's
+rules, the ones its app offers and its indexer counts a lock as locked by:
+
+| Rule | Contract | Builder (`buildLockCreate`, `checkLockCreateTx`) |
+|---|---|---|
+| Releases | 1 to 100 | the same |
+| Amount | 1 to 10^18 tokens, at least one per release | at least 0.05 % of `supply`, at most `supply` |
+| Shortest lock | none | the last release at least `minDurationMs` after `now`: 7 days by default (`LOCK_MIN_DURATION_MS`); `lockMinDurationMsOf('testnet-10')` is 10 minutes (`LOCK_MIN_DURATION_MS_TESTNET`) |
+| Longest lock | the end at most `endCap` (end + 5 years) | the last release at most 2 years after `now` (`LOCK_MAX_DURATION_MS`) |
+| Back-dated schedule | allowed | refused: the first release by the schedule (`start + period`) must be after `now` |
+| Beneficiary | any 32 bytes, scheme `0x00` or `0x03` | a valid x-only key, or a script that needs a signature (`keyLockedRedeem`; `allowAnyScript` to override) |
+
+The 7-day minimum is Kasseal's mainnet rule. For now Kasseal's app also offers 10-minute locks on mainnet, and its
+indexer counts them as locked; pass `minDurationMs: LOCK_MIN_DURATION_MS_TESTNET` to build one. That is a policy
+setting that may return to 7 days, not a contract rule.
+
 ## Browser
 
 ```js
@@ -223,7 +338,7 @@ await initWeb({ kaspa: { module: kaspa, wasm: new URL('./vendor/kaspa/kaspa_bg.w
 
 ## Integrity
 
-- Contract artifacts: only the two builds above are bundled. `dist/artifacts/manifest.json` lists each build's
+- Contract artifacts: only the builds above and the token-lock build are bundled. `dist/artifacts/manifest.json` lists each build's
   template hashes and the SHA-256 of every file; the same manifest is compiled into the code, and every file is
   checked before use. A missing, altered or unlisted file is refused (`ArtifactIntegrityError`).
 - Kaspa WASM SDK: rusty-kaspa v2.1.0, unmodified. The Node build is hashed before it is loaded; the web WASM is
@@ -245,6 +360,7 @@ instead of matching messages. `ERROR_CODES` lists them all; [docs/errors.md](doc
 | [Trading bots](docs/trading-bots.md) | Reading state, building, racing, retrying, rate limits |
 | [DEXs and routers](docs/dex-and-routers.md) | Composable swaps: what the pool checks, what it refuses, what you must guard |
 | [Wallets](docs/wallets.md) | Showing Kasseal tokens and signing with KasWare, Kastle and Kaspire |
+| [Partner tag](docs/partner-tag.md) | Wallets: adding your partner tag to the trades you build or sign |
 | [Explorers](docs/explorers.md) | Labelling Kasseal covenants and transactions, decoding state |
 | [Launch proof](docs/launch-proof.md) | What the proof verifies and how to run it |
 | [API](docs/api.md) | REST routes, the stream, rate limits, errors |

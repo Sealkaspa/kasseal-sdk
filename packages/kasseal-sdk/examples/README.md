@@ -12,6 +12,7 @@ Run them with Node 22.6 or later (`node --experimental-strip-types examples/<fil
 | [`pool-buy.ts`](pool-buy.ts) | The full flow: proof, build on the latest state, sign, submit, safe retry | Yes (`KEY`) |
 | [`swap-and-deposit.ts`](swap-and-deposit.ts) | A pool buy delivered to a key-locked script | Yes (`KEY`) |
 | [`pool-sell-wallet.ts`](pool-sell-wallet.ts) | A pool sell signed by a browser wallet (module for a web page) | Wallet |
+| [`partner-tag.ts`](partner-tag.ts) | A wallet's own swap screen: every trade builder with the wallet's partner tag, and the tag checks | Wallet |
 | [`lib/api.ts`](lib/api.ts) | A minimal REST client: reads, submission and status (the builder's sources are the SDK's `createApiSources`) | |
 | [`lib/proof.ts`](lib/proof.ts) | Launch-proof check with the public Kaspa API graduation check | |
 

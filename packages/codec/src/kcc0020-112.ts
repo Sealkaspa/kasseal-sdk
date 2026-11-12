@@ -482,6 +482,8 @@ export function parseOwnerWitness(bytes: Uint8Array, owner: TokenState['owner'])
     case 'covenant-id':
       want(0, 'empty');
       return { scheme: 'covenant-id/v1' };
+    case 'address-presence':
+      throw new TransferError('address-presence is not a KCC-2 owner scheme');
   }
 }
 

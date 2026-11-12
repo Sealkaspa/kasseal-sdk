@@ -149,6 +149,11 @@ After the wallet answers, `signBuilt`:
 
 Anything else is refused with `FinalizeError` and nothing is submitted.
 
+**Trades made in your own app.** A wallet partner that builds Kasseal trades in its own app passes its partner id and
+the `embedded` channel as the builder's `partner` option, on every build and every rebuild of a trade. The tag is the
+transaction's 6-byte payload, covered by the txid, so the check above also refuses a signed transaction whose tag
+was removed or changed. See [Wallets: adding your partner tag](partner-tag.md).
+
 **Before you show a signing prompt**, show the user what the SDK computed: the tokens or KAS they receive, the
 all-in cost (`maxAllIn`) or the net amount (`minNetOut`), the cell deposit and the network fee. The builder refuses
 to build when those bounds are not met (`NetBoundExceeded`).

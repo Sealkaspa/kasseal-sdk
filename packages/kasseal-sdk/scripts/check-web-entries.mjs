@@ -66,6 +66,9 @@ export function checkWebEntries(dist = path.join(PKG, 'dist')) {
       if (!want && perBuild[b].chunks > 0) fail('web entries', `${entry} reaches ${perBuild[b].chunks} chunk(s) of ${b}`);
       if (want && perBuild[b].chunks !== chunksPerBuild[b]) fail('web entries', `${entry} reaches ${perBuild[b].chunks} of the ${chunksPerBuild[b]} chunks of ${b}`);
     }
+    // The token-lock build (both networks) is one chunk every web entry reaches, loaded on demand.
+    const lockChunks = [...files.keys()].filter((f) => /^chunks\/token-lock-v1-[^/]+\.js$/.test(f));
+    if (lockChunks.length !== 1) fail('web entries', `${entry} reaches ${lockChunks.length} token-lock chunks, expected 1`);
     if (LITE_ENTRIES.includes(entry)) {
       if ([...files.keys()].some((f) => f.startsWith('kaspa/'))) fail('web entries', `${entry} reaches the bundled Kaspa SDK`);
       // A bundler emits an asset for `new URL('…', import.meta.url)`; the digest table only names the file.

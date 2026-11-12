@@ -16,7 +16,8 @@ export type SalePhase =
 export type Verification =
   | 'verified'      // every transition checked against the rules
   | 'unvalidated'   // indexed but not fully proven
-  | 'invalid';      // a rule violation was observed
+  | 'invalid'       // a rule violation was observed
+  | 'external';     // another launchpad's token and contract (`Token.venue`): Kasseal checks the pinned pool, not the rules; never Sealed
 
 /** A token's identity and declared metadata. */
 export interface TokenMeta {
@@ -134,8 +135,83 @@ export interface Token {
    * pool is open, the pool's reserve ratio. Absent when there is no price (no sale, or a pool not open yet).
    */
   marketCapSompi?: bigint;
+  /** Every accepted trade of the token, both venues, all time (the Trades figure). Absent from a source that does not count them. */
+  trades?: number;
   /** Link out for independent on-chain verification. */
   explorerUrl?: string;
+  /** The token's locks: what is locked and when it next unlocks. Absent when it has none. */
+  locks?: TokenLocks;
+  /**
+   * Who fills the token's trades when it is not Kasseal: an outside pool (an imported coin). Absent for every Kasseal
+   * token. A token with a venue has `verification` `external`, no `curve`, and phase `listed`.
+   */
+  venue?: ExternalVenue;
+}
+
+/**
+ * An outside pool that fills an imported coin's swaps. Only a pool Kasseal pinned can appear here; the ids are
+ * lowercase hex covenant ids.
+ */
+export interface ExternalVenue {
+  kind: 'external';
+  /** Who runs the pool, as named in the UI. */
+  operator: string;
+  /** The pool's covenant id. */
+  poolId: string;
+  /** The token's covenant id (equal to `Token.meta.covenantId`). */
+  tokenId: string;
+  /** `stopped`: the pool changed in a way the pin does not recognise; no trade is built until the owner restarts it. */
+  status: 'live' | 'stopped';
+  /** Why the venue stopped, when it has. */
+  stoppedReason?: string;
+  /**
+   * The pool's live state as Kasseal's indexer proved it from its own node, absent until it proved one. The price is
+   * the reserve ratio; `Token.marketCapSompi` is it times the supply.
+   */
+  pool?: ExternalVenuePool;
+  /**
+   * Block time (ms) from which Kasseal recorded the venue's trades: its trade list, candles and volume begin here
+   * ("history from <date>"); trades before it are not on Kasseal's node. Absent until the indexer started following it.
+   */
+  historyFromMs?: number;
+  /**
+   * True only while the holder figures are proven complete (every live cell found on Kasseal's node, adding up to the
+   * supply with no minter). False or absent: `supply.holders` is 0 and the holder list empty, and neither is to be shown.
+   */
+  holdersProven?: boolean;
+}
+
+/** An outside pool's live state (`ExternalVenue.pool`). */
+export interface ExternalVenuePool {
+  /** KAS in the pool, in sompi (the pool cell's value). */
+  kasReserveSompi: bigint;
+  /** Tokens in the pool's reserve cell, in base units. */
+  tokenReserve: bigint;
+  /** Sompi per whole token: floor(kasReserveSompi / tokenReserve). */
+  priceSompi: bigint;
+  /** The pool cell's outpoint (the head the next trade spends). */
+  txid: string;
+  index: number;
+  /** Block time (ms) of the transaction that left this state. */
+  timeMs: number;
+}
+
+/** A token's locks at a glance (cards and the token header); `GET /tokens/{id}/locks` has the list. */
+export interface TokenLocks {
+  /** Locks of the token (or of its pool's LP shares) still holding anything. */
+  active: number;
+  /** Tokens still held by the token's active locks (LP-share locks not included). */
+  lockedTokens: bigint;
+  /** `lockedTokens` over the total supply, basis points (floor). */
+  lockedBps: number;
+  /** Of `lockedTokens`, what locks made by the token's creator hold. */
+  creatorLockedTokens: bigint;
+  /** A lock made by the token's creator, at least 0.05 % of supply, 7 days to 5 years, not finished, on a bound token. */
+  creatorBadge: boolean;
+  /** When the earliest unpaid release of an active token lock is due (Unix ms; may be past: claimable); null without one. */
+  nextUnlockMs: number | null;
+  /** LP shares held by active locks of the token's pool's LP-share lineage. */
+  lpLockedShares: bigint;
 }
 
 /** Filters and paging for `listTokens`. */

@@ -19,8 +19,8 @@ const node = (code, cwd = DIST) => spawnSync(process.execPath, ['--input-type=mo
 
 test('the Node entry exports the public surface and leaves out launch, batch and keeper code', () => {
   for (const name of ['createTxBuilder', 'createContext', 'buildBuy', 'buildSell', 'buildSwapKasForTokens', 'buildSwapTokensForKas', 'buildAddLiquidity', 'buildRemoveLiquidity',
-    'planClaims', 'buildClaims', 'verifyLaunchProofJson', 'verifyLaunchProof', 'launchProofFromJson', 'graduationOnChain', 'createApiSources', 'keyLockedRedeem', 'assertSafeRedeem', 'UnsafeScript',
-    'maxWithSlippage', 'swapKasForTokens', 'createKasWareAdapter', 'createKastleAdapter', 'createKaspireAdapter', 'verifyArtifacts']) {
+    'planClaims', 'buildClaims', 'verifyLaunchProofJson', 'verifyLaunchProof', 'launchProofFromJson', 'graduationOnChain', 'createApiSources', 'fetchCurveHeads', 'keyLockedRedeem', 'assertSafeRedeem', 'UnsafeScript',
+    'maxWithSlippage', 'swapKasForTokens', 'createKasWareAdapter', 'createKastleAdapter', 'createKaspireAdapter', 'verifyArtifacts', 'encodePartnerTag', 'decodePartnerTag', 'decodePartnerTagHex']) {
     assert.equal(typeof m[name], 'function', name);
   }
   for (const name of ['buildCreate', 'buildTokenGenesisInit', 'registrationOf', 'buildGraduate', 'buildGraduateAndBind', 'buildPlaceOrder', 'buildFill', 'buildVaultBuy', 'buildSplitterSplit',
@@ -94,6 +94,28 @@ test('quote and build a pool buy on fake cells (composable pool, testnet-10)', (
   assert.equal(built.inputsToSign.length, 1);
   const tx = JSON.parse(built.txJson);
   assert.equal(tx.outputs.length, 4);
+  assert.equal(tx.payload, '');
+
+  // A wallet that embeds Kasseal tags its users' trades: partner id and channel `embedded` (3) as the 6-byte payload.
+  const partner = { partner: m.PARTNER_IDS.kaspire, channel: m.PARTNER_CHANNELS.embedded };
+  const tagged = m.toBuilt(m.buildSwapKasForTokens({ ctx, pool, poolToken: reserve, buyer: { xOnlyPubkey: xonly, address }, kasInScaled, funding: [funding], partnerTag: partner }));
+  assert.equal(JSON.parse(tagged.txJson).payload, '4b5301000203');
+  assert.deepEqual(m.decodePartnerTagHex(JSON.parse(tagged.txJson).payload), partner);
+  assert.equal(tagged.masses.bytes, built.masses.bytes + 6);
+  assert.equal(tagged.feeSompi, BigInt(tagged.masses.max) * 100n);
+  assert.throws(() => m.buildSwapKasForTokens({ ctx, pool, poolToken: reserve, buyer: { xOnlyPubkey: xonly, address }, kasInScaled, funding: [funding], partnerTag: { partner: 1001, channel: 3 } }), RangeError);
+});
+
+test('partner tag format version 1 is stable (docs/partner-tag.md)', () => {
+  assert.deepEqual([m.PARTNER_TAG_MAGIC_0, m.PARTNER_TAG_MAGIC_1, m.PARTNER_TAG_VERSION, m.PARTNER_TAG_BYTES], [0x4b, 0x53, 1, 6]);
+  assert.deepEqual({ ...m.PARTNER_IDS }, { kasware: 1, kaspire: 2, kastle: 3, braidswap: 1000 });
+  assert.deepEqual({ ...m.PARTNER_CHANNELS }, { extension: 1, walletconnect: 2, embedded: 3 });
+  // The guide's example: KasWare on the in-wallet channel.
+  assert.deepEqual([...m.encodePartnerTag({ partner: 1, channel: 3 })], [0x4b, 0x53, 0x01, 0x00, 0x01, 0x03]);
+  assert.deepEqual(m.decodePartnerTagHex('4b5301000103'), { partner: 1, channel: 3 });
+  // Strict: a tag with more bytes, another version, uppercase hex or an unknown id or channel is not a tag.
+  for (const hex of ['4b530100010300', '4b5302000103', '4B5301000103', '4b5301000004', '4b530103e903', '']) assert.equal(m.decodePartnerTagHex(hex), null, hex);
+  assert.throws(() => m.encodePartnerTag({ partner: 1, channel: 4 }), RangeError);
 });
 
 test('errors carry stable codes', () => {
@@ -216,6 +238,35 @@ test('createApiSources: explicit network and base URL, waits out 429, typed erro
   await assert.rejects(s.funding(mainnetAddress), (e) => e.code === 'ADDRESS');
   await assert.rejects(s.poolCell(P), (e) => e.code === 'HEAD_MOVING');
   await assert.rejects(s.curveHead(T), (e) => e instanceof m.ApiError && e.code === 'API_ERROR' && e.status === 404);
+});
+
+test('fetchCurveHeads: 50 ids per request, order kept, pool=state by default, waits out 429, per-item errors', async () => {
+  assert.equal(m.CURVE_HEADS_MAX, 50);
+  await assert.rejects(m.fetchCurveHeads({ baseUrl: 'x.test' }, [T]), TypeError);
+  await assert.rejects(m.fetchCurveHeads({ baseUrl: 'https://x.test/v1' }, ['zz']), TypeError);
+  const ids = Array.from({ length: 60 }, (_, k) => k.toString(16).padStart(64, '0'));
+  const calls = [];
+  let first = true;
+  const fetch = async (url) => {
+    calls.push(url);
+    const json = (status, body) => ({ ok: status === 200, status, json: async () => body });
+    if (first) {
+      first = false;
+      return json(429, { retryAfterMs: 0 });
+    }
+    const asked = new URL(url).searchParams.get('ids').split(',');
+    return json(200, { items: asked.map((id, k) => (k === 0 ? { id, error: { type: 'urn:kasseal:problem:curve-closed', title: 'Curve closed', status: 410 } } : { id, head: { headSpent: true } })) });
+  };
+  const items = await m.fetchCurveHeads({ baseUrl: 'https://x.test/v1/', fetch }, [...ids, ids[0]]);
+  assert.deepEqual(items.map((x) => x.id), ids, 'the order asked, without repeats');
+  assert.equal(calls.length, 3, 'a 429 waited out, then 50 + 10');
+  assert.ok(calls[1].startsWith('https://x.test/v1/tokens/heads?ids=') && calls[1].endsWith('&pool=state'));
+  assert.equal(new URL(calls[1]).searchParams.get('ids').split(',').length, 50);
+  assert.equal(items[0].error.status, 410);
+  assert.equal(items[1].head.headSpent, true);
+  calls.length = 0;
+  await m.fetchCurveHeads({ baseUrl: 'https://x.test/v1', fetch, cells: true, pool: false }, [T]);
+  assert.ok(calls[0].endsWith('&cells=1'));
 });
 
 test('compareGraduationWithChain: only present values that differ are a mismatch', async () => {

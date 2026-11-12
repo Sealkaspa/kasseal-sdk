@@ -19,6 +19,8 @@
  *   out1  POOL'   binding (2, P)          value - kasOutNet * 1e6
  *   out2  payout  P2PK(seller)
  *
+ * Both carry the wallet partner tag as the payload when `partnerTag` is given (6 bytes), else an empty payload.
+ *
  * On-chain bounds: the sell's `minOutScaled` and, on pools with the bounded buy, the buy's
  * `minTokensOut` carry the caller's minimum, else the exact quote. Unchained, a swap binds one exact pool outpoint, so a
  * race rejects instead of mis-filling; the bound is what keeps a swap built on a pending pool tip (pool chaining) from
@@ -51,7 +53,7 @@ import { p2shScript } from '../blake2b.ts';
 import { concat, toHex } from '@kasseal/codec';
 import {
   DEFAULT_USER_CELL_VALUE, MIN_PAYOUT, MIN_USER_CELL_VALUE, WITNESS_COVENANT, WITNESS_SIGNED, assertAllIn, assertNetOut, checkTokenFamily, feeFields, finish, fundingSum,
-  requireLineage, requirePoolOfContext, requirePoolToken, requireUserCell, type FeeOptions, type Shaped, requireOwnLineages, MIN_P2PK_OUTPUT_VALUE,
+  requireLineage, requirePoolOfContext, requirePoolToken, requireUserCell, type FeeOptions, type PartnerOptions, type Shaped, requireOwnLineages, MIN_P2PK_OUTPUT_VALUE, tradePayload,
 } from './common.ts';
 import type { Buyer } from './buy.ts';
 import type { Seller } from './sell.ts';
@@ -67,7 +69,7 @@ export function poolMathState(pool: PoolCell): PoolMathState {
 }
 
 /** Inputs of `buildSwapKasForTokens`: the verified pool, its reserve and the buyer's funding. */
-export interface SwapKasForTokensParams extends FeeOptions {
+export interface SwapKasForTokensParams extends FeeOptions, PartnerOptions {
   /** The network's builder context. */
   readonly ctx: BuilderContext;
   /** The pool cell. */
@@ -193,7 +195,7 @@ export function buildSwapKasForTokens(params: SwapKasForTokensParams): SwapKasFo
     ],
     residual: changeTo(p2pkScript(buyer.address), 'change (buyer)'),
     genesisGroups: [],
-    payload: new Uint8Array(0),
+    payload: tradePayload(params.partnerTag),
     ...feeFields(params),
   };
   requireOwnLineages(plan, [pool.covenantId, T]);
@@ -204,7 +206,7 @@ export function buildSwapKasForTokens(params: SwapKasForTokensParams): SwapKasFo
 }
 
 /** Inputs of `buildSwapTokensForKas`: the verified pool, its reserve and the seller's cell. */
-export interface SwapTokensForKasParams extends FeeOptions {
+export interface SwapTokensForKasParams extends FeeOptions, PartnerOptions {
   /** The network's builder context. */
   readonly ctx: BuilderContext;
   /** The pool cell. */
@@ -316,7 +318,7 @@ export function buildSwapTokensForKas(params: SwapTokensForKasParams): SwapToken
     ],
     residual: payoutTo(p2pkScript(seller.address), 'payout (seller)', MIN_PAYOUT),
     genesisGroups: [],
-    payload: new Uint8Array(0),
+    payload: tradePayload(params.partnerTag),
     ...feeFields(params),
   };
   requireOwnLineages(plan, [pool.covenantId, T], auth === undefined ? undefined : { outpoint: auth.utxo.outpoint, spk: p2shScript(auth.redeem) });

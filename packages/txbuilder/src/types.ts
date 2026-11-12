@@ -20,7 +20,7 @@
  *     borrowed receive (see the field).
  */
 
-import type { TokenState } from '@kasseal/codec';
+import type { PartnerTag, TokenState } from '@kasseal/codec';
 import type { FundingUtxo, Outpoint } from './assemble.ts';
 import type { Masses } from './mass.ts';
 import type { CurveState, PoolCellState } from './program.ts';
@@ -97,7 +97,8 @@ export interface InputToSign {
 export type OutputRole =
   | 'curve' | 'pool' | 'token-user' | 'token-rest' | 'token-reserve' | 'prep' | 'treasury' | 'creator' | 'payout' | 'change'
   | 'company' | 'vault' | 'deposit' | 'splitter'
-  | 'order' | 'pot' | 'dist-key' | 'filler' | 'refund';
+  | 'order' | 'pot' | 'dist-key' | 'filler' | 'refund'
+  | 'lock' | 'lock-factory' | 'beneficiary';
 
 /** An unsigned transaction ready for the wallet, with everything needed to sign, finalize and track it. */
 export interface BuiltTx {
@@ -216,6 +217,12 @@ export interface BuildBuyParams {
    * curve's `buy` requires `OpCovInputCount(T) == 1` and a user output of exactly `n * lot`.
    */
   readonly borrowInto?: Outpoint;
+  /**
+   * The wallet partner this trade is credited to: written as the 6-byte payload,
+   * covered by the txid and every signature. A wallet that embeds Kasseal passes its partner id and channel 3
+   * (`embedded`). Pass the same value on every rebuild of the trade (retry, replacement, chaining).
+   */
+  readonly partner?: PartnerTag;
 }
 
 /** Parameters of a curve sell (`buildSell`). */
@@ -259,6 +266,12 @@ export interface BuildSellParams {
    * `lots * lot` of the committed curve template equals it. The app always passes it.
    */
   readonly expectedTokens?: bigint;
+  /**
+   * The wallet partner this trade is credited to: written as the 6-byte payload,
+   * covered by the txid and every signature. A wallet that embeds Kasseal passes its partner id and channel 3
+   * (`embedded`). Pass the same value on every rebuild of the trade (retry, replacement, chaining).
+   */
+  readonly partner?: PartnerTag;
 }
 
 /** Parameters of a pool swap (`buildSwap`). */
@@ -302,6 +315,12 @@ export interface BuildSwapParams {
    * is set: tokens delivered to any other script may be unrecoverable.
    */
   readonly deliverToScript?: { readonly redeem: Uint8Array; readonly scriptFunding: Sompi; readonly allowAnyScript?: boolean };
+  /**
+   * The wallet partner this trade is credited to: written as the 6-byte payload,
+   * covered by the txid and every signature. A wallet that embeds Kasseal passes its partner id and channel 3
+   * (`embedded`). Pass the same value on every rebuild of the trade (retry, replacement, chaining).
+   */
+  readonly partner?: PartnerTag;
 }
 
 /**
@@ -325,6 +344,12 @@ export interface BuildScriptSellParams {
   readonly scriptAddress: string;
   /** Accept a redeem script other than `<signerXOnly> OP_CHECKSIG` (refused by default). */
   readonly allowAnyScript?: boolean;
+  /**
+   * The wallet partner this trade is credited to: written as the 6-byte payload,
+   * covered by the txid and every signature. A wallet that embeds Kasseal passes its partner id and channel 3
+   * (`embedded`). Pass the same value on every rebuild of the trade (retry, replacement, chaining).
+   */
+  readonly partner?: PartnerTag;
 }
 
 /** Parameters of `buildConsolidate`: merge a holder's token cells. */

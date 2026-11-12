@@ -35,10 +35,16 @@ The SDK never assumes a base URL: pass it explicitly.
 | `GET /tokens/{id}/trades`, `/candles`, `/holders` | History and holders |
 | `GET /tokens/{id}/quote` | The server's quote, for display. Build trades from your own quote |
 
+A token whose `venue` field is set (`verification: "external"`, phase `listed`) is an imported coin: it launched
+elsewhere and trades through its own pool, a contract Kasseal did not write. This package's builders do not trade it
+(it has no Kasseal curve or pool), so skip it when you offer swaps. Kasseal takes no fee on its trades, and they earn no
+partner share ([partner-tag.md](partner-tag.md)).
+
 **Curve (while bonding)**
 
 | Route | Returns |
 |---|---|
+| `GET /tokens/heads?ids=…[&cells=1][&pool=state]` | Up to 50 tokens' curve heads in one request, in the order asked: each item exactly the single `curve-head` answer, a graduated token's pool state with `pool=state`, per-item `error` otherwise. `fetchCurveHeads` wraps it |
 | `GET /tokens/{id}/curve-head[?cells=1]` | The live curve cell, its constants, the pending `tip`; with `cells=1` the supply and reserve cells in one consistent read. `410 curve-closed` once graduated |
 | `GET /tokens/{id}/covenant-cells` | The curve-owned (or, once graduated, pool-owned) token cells, and `strays` |
 | `GET /tokens/{id}/cells?owner=<key>` | Live token cells of one owner: `pk:<x-only hex>`, `script:<hash>` or `covenant:<id>` |
@@ -64,6 +70,50 @@ The SDK never assumes a base URL: pass it explicitly.
 | `GET /tx/{txid}` | The transaction's status ([trading-bots.md](trading-bots.md#7-signing-submitting-and-following-a-transaction)) |
 | `GET /price/kas` | The KAS/USD price and when it was taken |
 | `GET /health` | The node's sync state and the indexer's lag |
+
+**Token locks**
+
+| Route | Returns |
+|---|---|
+| `GET /tokens/{id}/locks` | The token's locks and the summary its page shows (locked share, next unlock) |
+| `GET /locks/{K}` | One lock: state, schedule (each release's time and amount, paid or not), events |
+| `GET /locks/{K}/cells` | `nowMs` and, while the lock is active, the lock with the two live cells a claim spends (`lockCell`, `tokenCell`, redeem scripts and states included); `locks` is empty otherwise |
+| `GET /locks[?due=1]` | Active locks with their cells; `due=1` only those with a release claimable at `nowMs`, earliest first |
+| `GET /address/{address}/locks[?role=creator]` | The locks an address is paid by (default) or made |
+| `GET /address/{address}/lock-factory-cells?outpoints=…` | Which of a creator's factory cells (up to 32 `txid:index`) the indexer saw funded by a lock prep. A lock is listed only if its factory cell is one of these |
+
+`nowMs` is the time of the indexer's newest block. A claim's lock time must be below the chain's past median time,
+which runs about two minutes behind it: Kasseal's app claims at `nowMs - 120000`. `POST /tx` relays lock preps,
+creates and claims. Figures such as `locked` and `released` come from the lock's state, never from balances: always
+re-derive the cells you build on (`lockCellOf` does).
+
+Create (prep, then create; see the README's Token locks section for the parameters):
+
+```ts
+import { buildLockCreate, buildLockPrep, loadLockSet } from '@kassealhq/sdk/node';
+
+const set = await loadLockSet();
+const prep = buildLockPrep({ set, creator, funding });                        // funding: GET /address/{creator}/utxos
+const change = { outpoint: { txid: prep.tx.txid, index: 1 }, amount: prep.built.outputs[1]!.value, spk: prep.built.outputs[1]!.spk, daaScore: 0n, address: creator };
+const lock = buildLockCreate({ set, creator, factory: { ...prep.factory, daaScore: 0n }, tokenCells, beneficiary, total, start, cliff, period, tranches, funding: [change], supply, now });
+// tokenCells: GET /tokens/{id}/cells?owner=pk:<creator key>. Sign both; POST /tx the prep, then the create once the prep is accepted.
+```
+
+Claim (no signature):
+
+```ts
+import { buildLockClaim, fromHex, lockCellOf, tokenStateFromJson } from '@kassealhq/sdk/node';
+
+const { nowMs, locks } = await (await fetch(`${API_BASE}/locks/${K}/cells`)).json();
+const { lockCell: c, tokenCell: t } = locks[0];
+const claim = buildLockClaim({
+  set,
+  lock: lockCellOf(set, { outpoint: c.outpoint, value: BigInt(c.amount), covenantId: c.covenantId, program: fromHex(c.redeemScript), daaScore: 0n }),
+  tCell: { kind: 'token', outpoint: t.outpoint, value: BigInt(t.amount), covenantId: t.covenantId, program: fromHex(t.redeemScript), state: tokenStateFromJson(t.state), daaScore: 0n },
+  now: BigInt(nowMs) - 120_000n,
+});
+await fetch(`${API_BASE}/tx`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ txJson: claim.tx.txJson }) });
+```
 
 **Relay policy.** `POST /tx` relays a transaction that touches a lineage the indexer tracks (a Kasseal curve, pool or
 token, or an output of a transaction relayed in the last 15 minutes); anything else is `403`. `200` means it is in
@@ -109,6 +159,8 @@ Per client (an IPv4 address or an IPv6 /64), as token buckets with three seconds
 
 A refusal is `429` with `Retry-After` (whole seconds) and `retryAfterMs` in the body. Back off for at least that long,
 with jitter, growing on repeats. If you need more from fixed server IPs, contact Kasseal.
+
+Trade reads also have a **weight** (a plain read 1, `curve-head` 2, `curve-head?cells=1` 3, `cells` and `pools/{id}/cell` 2, the bulk `tokens/heads` 2 plus one per 4 ids) against 450 per second with a burst of 1,350, and at most **8 trade reads in flight** per client: more wait in order, up to 2 s each, then `429`. Responses carry `RateLimit-Policy`, `RateLimit` and `X-Kasseal-Weight` so you can pace yourself. Both are counted but not yet applied; the date they apply will be announced here. To price many tokens, use `GET /tokens/heads?ids=` (50 per request) or the stream instead of one request per token. Limits are per API replica; one client always reaches the same one. `fetchCurveHeads` uses the bulk route.
 
 ## Browsers and Origin
 

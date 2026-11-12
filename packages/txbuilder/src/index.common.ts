@@ -12,6 +12,7 @@
  *   instance.ts   the network launch rules (mainnet: Standard only)
  *   payout.ts     fee payouts per contract set (v1 50/50) and the graduation fold
  *   vault.ts      companion-contract artifacts (none ship; the mainnet treasury rule reads their absence)
+ *   lock.ts       token locks v1: the lock and factory artifacts, the state codec, the schedule arithmetic, the app rules
  *   quote.ts      lot rounding in the user's favour: lots for a KAS budget (floor), lots of a token amount, the smallest sell
  *   recipients.ts the pre-sign recipient check: every token output re-derived from its claimed state, owners the
  *                 connected key or a named covenant
@@ -50,6 +51,7 @@ export * from './instance.ts';
 export * from './treasury.ts';
 export * from './payout.ts';
 export * from './vault.ts';
+export * from './lock.ts';
 export * from './quote.ts';
 export * from './recipients.ts';
 export * from './slippage.ts';
@@ -71,4 +73,5 @@ export * from './wallet/index.ts';
 export * from './sdk.ts';
 export * from './types.ts';
 export * from './finalize.ts';
+export { isXOnlyPubkey } from './bip340.ts';
 export * from './required.ts';

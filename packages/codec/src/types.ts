@@ -27,7 +27,8 @@ export type OwnerSemantic =
   | 'script-hash'       // legacy 0x01 / KCC2 p2sh
   | 'covenant-id'       // legacy 0x02 / KCC2 covenant-id
   | 'p2pkh-schnorr'     // KCC2 only
-  | 'p2pkh-ecdsa';      // KCC2 only
+  | 'p2pkh-ecdsa'       // KCC2 only
+  | 'address-presence'; // an outside token program's 0x03 owner only: a co-present P2PK input of the key authorises
 
 /** Verified scheme-byte -> meaning map. Comes from a template descriptor or a codec's reference map. */
 export type SchemeMap = ReadonlyMap<number, OwnerSemantic>;
@@ -38,7 +39,7 @@ export interface OwnerRef {
   readonly schemeByte: number;
   /** The resolved meaning, from the verified template descriptor. */
   readonly semantic: OwnerSemantic;
-  /** 32-byte identifier: pubkey, script hash, or covenant id. */
+  /** 32-byte identifier: pubkey, script hash, or covenant id (an x-only key for address-presence). */
   readonly identifier: Uint8Array;
 }
 

@@ -58,5 +58,6 @@ compromised user device or key.
 
 ## Supported versions
 
-Security fixes go into the latest 0.x release. A release with a security fix is announced in the
-[CHANGELOG](CHANGELOG.md), and affected versions are marked deprecated on npm. See [STABILITY.md](STABILITY.md).
+Security fixes go into the latest 1.x release; 0.x releases receive no further fixes. A release with a security fix
+is announced in the [CHANGELOG](CHANGELOG.md), and affected versions are marked deprecated on npm. See
+[STABILITY.md](STABILITY.md).

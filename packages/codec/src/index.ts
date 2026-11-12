@@ -34,3 +34,4 @@ export function createDefaultRegistry(): LayoutRegistry {
 }
 export * from './display-text.ts';
 export * from './protected-names.ts';
+export * from './partner-tag.ts';

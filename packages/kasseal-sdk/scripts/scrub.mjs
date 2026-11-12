@@ -10,10 +10,14 @@ export const SOURCE_REPLACEMENTS = [];
 /** Modules replaced in the bundle: [source file suffix, contents]. Empty. */
 export const MODULE_STUBS = [];
 
-/** Declaration text: [exact text, replacement]. Output roles left out of the published `OutputRole` type. */
+/** Declaration text: [exact text, replacement]. Output roles and input kinds this package never produces. */
 export const DTS_REPLACEMENTS = [
-  [" | 'company' | 'vault' | 'deposit' | 'splitter' | 'order' | 'pot' | 'dist-key' | 'filler' | 'refund';", ';'],
+  [" | 'company' | 'vault' | 'deposit' | 'splitter' | 'order' | 'pot' | 'dist-key' | 'filler' | 'refund' | 'lock' | 'lock-factory' | 'beneficiary';", " | 'lock' | 'lock-factory' | 'beneficiary';"],
+  ["CellKind | 'vault' | 'deposit' | 'splitter' | 'order' | 'anchor' | 'dist-key' | 'lock' | 'lock-factory';", "CellKind | 'lock' | 'lock-factory';"],
 ];
+
+/** Declaration blocks removed by pattern. Empty. */
+export const DTS_REMOVED_BLOCKS = [];
 
 /** Declaration members removed: [interface name, member line]. Empty. */
 export const DTS_REMOVED_MEMBERS = [];
@@ -44,6 +48,14 @@ export function scrubDeclarations(text) {
     if (text.includes(from)) {
       text = text.split(from).join(to);
       applied++;
+    }
+  }
+  for (const re of DTS_REMOVED_BLOCKS) {
+    const n = text.match(re)?.length ?? 0;
+    if (n > 0) {
+      // The union's last member closes it: the removed members are replaced by that closing brace.
+      text = text.replace(re, (m) => (m.startsWith('}') ? '}' : '\n'));
+      applied += n;
     }
   }
   for (const [iface, member] of DTS_REMOVED_MEMBERS) {

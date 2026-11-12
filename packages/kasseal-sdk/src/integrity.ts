@@ -13,10 +13,25 @@ export interface ArtifactBuildInfo {
   readonly presets: Readonly<Record<string, string>>;
 }
 
+/** The token-lock build: one set of programs for both networks (they name no treasury). */
+export interface LockArtifactInfo {
+  /** The directory of its files, relative to the artifact root. */
+  readonly path: string;
+  readonly set: 'kasseal-token-lock';
+  readonly version: '1';
+  readonly networks: readonly ('mainnet' | 'testnet-10')[];
+  /** LOCK_H: the lock program's template hash (its 140-byte state at offset 1 left out). */
+  readonly lockTemplateHash: string;
+  /** FACTORY_H: the lock factory's template hash (its 37-byte creator script at offset 1 left out). */
+  readonly factoryTemplateHash: string;
+  readonly compiler: string;
+}
+
 export interface ArtifactManifest {
   readonly format: 1;
   readonly builds: Readonly<Record<string, ArtifactBuildInfo>>;
   readonly tokenReference: { readonly path: string; readonly templateHash: string; readonly source: string };
+  readonly lock: LockArtifactInfo;
   /** Path (relative to the artifact root) -> SHA-256 (hex) of the file's bytes. */
   readonly files: Readonly<Record<string, string>>;
 }
@@ -88,6 +103,12 @@ export function artifactPathsOfBuild(build: string): string[] {
   if (artifactManifest.builds[build] === undefined) throw new ArtifactIntegrityError(build, 'is not a bundled build');
   const inBuild = (p: string): boolean => p.includes(`/artifacts/${build}/`);
   return Object.keys(artifactManifest.files).filter((p) => inBuild(p) || p === artifactManifest.tokenReference.path).sort();
+}
+
+/** The artifact paths of the token-lock build (both networks). */
+export function lockArtifactPaths(): string[] {
+  const prefix = `${artifactManifest.lock.path}/`;
+  return Object.keys(artifactManifest.files).filter((p) => p.startsWith(prefix)).sort();
 }
 
 /** The directory listing the builder asks for, answered from the manifest (file names directly inside `dir`). */

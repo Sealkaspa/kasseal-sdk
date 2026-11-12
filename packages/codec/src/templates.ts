@@ -127,6 +127,6 @@ export const QUARANTINED_TEMPLATES: readonly QuarantinedTemplate[] = Object.free
   {
     templateHash: '2ed46a7edf5b168e67dba56998c58255235bebac436940a85115ca31d5c559f2',
     window: { start: 0, length: 46 },
-    reason: 'second 0x03-family program, same reason.',
+    reason: 'an outside CP-family token program (0x03 = address presence); never decoded by the default registry.',
   },
 ]);

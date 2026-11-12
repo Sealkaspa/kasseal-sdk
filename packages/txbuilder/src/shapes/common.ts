@@ -14,7 +14,7 @@
 
 import { poolLimitsOf } from '../cells.ts';
 import { hasOpenLiquidity } from '../artifacts.ts';
-import { checkTransfer, fromHex, kcc0020Fields, templateHashOfProgram, toHex, type TokenState } from '@kasseal/codec';
+import { checkTransfer, encodePartnerTag, fromHex, kcc0020Fields, templateHashOfProgram, toHex, type PartnerTag, type TokenState } from '@kasseal/codec';
 import { assemble, feerateOf, scriptOfVersionedSpk, type AssembledTx, type CurveCell, type OutputPlan, type Outpoint, type PoolCell, type TokenCell, type TxPlan } from '../assemble.ts';
 import { toBuiltTx } from '../finalize.ts';
 import { SOMPI_PER_KAS } from '../mass.ts';
@@ -43,6 +43,20 @@ export interface FeeOptions {
   readonly feeMargin?: bigint;
   /** Sompi per gram (default and minimum 100; refused above `FEERATE_MAX_SOMPI_PER_GRAM`). */
   readonly feerate?: bigint;
+}
+
+/**
+ * The partner a trade is credited to (docs/partner-tag.md): curve buys and sells and pool swaps only. Every rebuild of
+ * the same trade passes the same tag.
+ */
+export interface PartnerOptions {
+  /** Written as the whole payload (`encodePartnerTag`, 6 bytes); without it the payload stays empty. */
+  readonly partnerTag?: PartnerTag;
+}
+
+/** The payload of a trade: the partner tag, or empty. An unknown partner or channel throws (`encodePartnerTag`). */
+export function tradePayload(tag: PartnerTag | undefined): Uint8Array {
+  return tag === undefined ? new Uint8Array(0) : encodePartnerTag(tag);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -154,8 +168,9 @@ export function deltaOf(a: AssembledTx, roles: readonly OutputRole[], extra: Del
   const poolIn: { covenantId: string; outpoint: Outpoint }[] = [];
   for (const i of a.plan.inputs) {
     const outpoint = { txid: i.outpoint.txid, index: i.outpoint.index };
-    // Companion-contract cells are not the signer's funding nor a lineage the app tracks: consumed outpoints.
-    if (i.cellKind === 'vault' || i.cellKind === 'deposit' || i.cellKind === 'splitter' || i.cellKind === 'order' || i.cellKind === 'anchor' || i.cellKind === 'dist-key') consumed.push(outpoint);
+    // Companion-contract and token-lock cells are not the signer's funding nor a lineage the app predicts: consumed
+    // outpoints. Their successors are left to the indexer.
+    if (i.cellKind === 'vault' || i.cellKind === 'deposit' || i.cellKind === 'splitter' || i.cellKind === 'order' || i.cellKind === 'anchor' || i.cellKind === 'dist-key' || i.cellKind === 'lock' || i.cellKind === 'lock-factory') consumed.push(outpoint);
     else if (i.covenantId === undefined) reserved.push(outpoint);
     else if (i.cellKind === 'token') consumed.push(outpoint);
     else if (i.cellKind === 'curve') curveIn.push({ covenantId: i.covenantId, outpoint });

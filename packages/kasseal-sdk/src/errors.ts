@@ -19,6 +19,7 @@ import { ArtifactMissing, ArtifactNotLoaded, ArtifactSourceNotInstalled, Contrac
 import { ResidualBelowMinimum } from '../../txbuilder/src/assemble.ts';
 import { ClaimMismatch } from '../../txbuilder/src/claims.ts';
 import { FinalizeError } from '../../txbuilder/src/finalize.ts';
+import { LockRuleViolation } from '../../txbuilder/src/lock.ts';
 import { FeeAboveCeiling, FeerateOutOfRange } from '../../txbuilder/src/mass.ts';
 import { OptimisticConflict } from '../../txbuilder/src/optimistic.ts';
 import { StateJsonError } from '../../txbuilder/src/program.ts';
@@ -30,6 +31,7 @@ import { InsufficientFundsError, PinnedFundingGone } from '../../txbuilder/src/s
 import { InsufficientTokensError } from '../../txbuilder/src/select/planner.ts';
 import { ForeignCovenantInput } from '../../txbuilder/src/shapes/common.ts';
 import { RatioDriftError } from '../../txbuilder/src/shapes/liquidity.ts';
+import { LockClaimNotDue, LockRefused } from '../../txbuilder/src/shapes/lock.ts';
 import { UnsafeScript } from '../../txbuilder/src/shapes/swap.ts';
 import { SlippageOutOfRange } from '../../txbuilder/src/slippage.ts';
 import { RejectedError } from '../../txbuilder/src/submit.ts';
@@ -130,6 +132,10 @@ const TABLE: readonly (readonly [ErrorClass, string])[] = [
   [TokenRecipientRefused, 'TOKEN_RECIPIENT_REFUSED'],
   [ClaimMismatch, 'CLAIM_MISMATCH'],
   [FinalizeError, 'FINALIZE'],
+  // Token locks
+  [LockRefused, 'LOCK_REFUSED'],
+  [LockClaimNotDue, 'LOCK_CLAIM_NOT_DUE'],
+  [LockRuleViolation, 'LOCK_RULE'],
   // Submission
   [RejectedError, 'REJECTED'],
   [ReplacementRefused, 'REPLACEMENT_REFUSED'],

@@ -1,8 +1,8 @@
 # Contract artifacts
 
-The SDK bundles the compiled Kasseal contracts for exactly four builds, two per network. It does not fetch programs
-from any server: every program the SDK builds with or checks against is in the package, and every file is checked
-against its SHA-256 when it loads.
+The SDK bundles the compiled Kasseal contracts for exactly four builds, two per network, and the token-lock build both
+networks share. It does not fetch programs from any server: every program the SDK builds with or checks against is in
+the package, and every file is checked against its SHA-256 when it loads.
 
 ## The builds
 
@@ -56,6 +56,35 @@ The template hash of every curve program is listed in the build's manifest in th
 The KCC-20 reference token program ships as `argent-kcc20-reference-c8a0871.json`, SHA-256
 `462a937240ff3dc6f297a06c2eeb48c5150e4a2a4995eedc71c724f3a34eedee`, compiled from `argent-lang/kcc20-reference` at
 revision `c8a0871`.
+
+## Token locks (both networks)
+
+One lock build serves mainnet and testnet-10: its programs name no treasury and no network. It is bundled under
+`contracts/lock/v1/artifacts/` and listed in the package manifest as `lock`.
+
+| | |
+|---|---|
+| Lock template hash (`LOCK_H`; 140-byte state at offset 1 left out) | `9f4eb229cfea334fafd15c05901ce20a8db0a59ba0932cbc7a3a1de079a70ac9` |
+| Lock program size | 4,827 bytes |
+| Factory template hash (`FACTORY_H`; 37-byte creator script at offset 1 left out) | `481065e01ee2f15fe06e7ce2b865857b073e18a6298e30a22551426c4c328f6b` |
+| Factory program size | 2,011 bytes |
+| Token template it holds (KCC-20 reference) | `9703112ee6e3555107cd168858992b77d3b74f655205b2b463b1f9ec2ec73cf7` |
+| Entry tags | `claim` `3ac6d18b`, `extend` `de31073a`, factory `create` `041ad008` |
+| Compiler | silverc v1.0.0 (`3ed973335b59269293564805cc2c58a14595ec03`) |
+
+| File | SHA-256 |
+|---|---|
+| `lock.artifact.json` | `1f0de542a17abd2d08abebd369c1c41427518f7f88c415317e16a187f0e416c1` |
+| `lock.ctor.json` | `e51a0c58e004505d0bb2ac02a55209916d4e80a51f686dd4576dcb8d30b7ddfe` |
+| `factory.artifact.json` | `65e4084cf4d9660001d80b4f3247142bef6804b610b3c61831b6f2674bdfdd51` |
+| `factory.ctor.json` | `b95a39bd35930c626d2ada15a4e925b3df29f65904d9cd3e71faa8844b55ece8` |
+| `build-report.txt` | `84542903ff726d3ccf68c1823e0bc1664ebae6722f0303953e2d7e0a52603565` |
+| `manifest.json` | `7836ef38a4b681b25f300b21e58701179ef8afc54603e859a6841340efee583d` |
+
+`loadLockSet()` (or `loadLockV1()` once the files are installed) hashes every file the lock manifest lists again,
+recomputes both template hashes from the compiled bytecode, checks that the factory pushes `LOCK_H` exactly once and
+carries the token template, and that the contract constants are the ones the builders mirror. In the web entries the
+lock files are one chunk, loaded on first use and checked against these digests.
 
 ## How the SDK checks them
 

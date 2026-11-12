@@ -8,7 +8,8 @@ import { sha256Hex } from '../../codec/src/sha256.ts';
 import { artifactSourceFromFiles, installArtifactSource, registerLazyArtifacts } from '../../txbuilder/src/artifacts.ts';
 import { installSdk, sdkAvailable, type KaspaSdk } from '../../txbuilder/src/sdk.ts';
 import { verifyKaspaSdk } from './kat.ts';
-import { ArtifactIntegrityError, SdkIntegrityError, artifactManifest, assertArtifactDigest, kaspaSdkDigests } from './integrity.ts';
+import { ArtifactIntegrityError, SdkIntegrityError, artifactManifest, assertArtifactDigest, kaspaSdkDigests, lockArtifactPaths } from './integrity.ts';
+import { LOCK_ARTIFACT_GROUP } from './locks.ts';
 import { assertNetwork, BUILDS_OF_NETWORK, UnsupportedNetwork, type KassealNetwork } from './networks.ts';
 import { decodeCurvePatchChunk, isCurvePatchChunk, isCurveTemplateChunk } from './web-chunks.ts';
 
@@ -162,6 +163,24 @@ async function loadChunk(entry: WebEntry, build: string, name: string): Promise<
   return files;
 }
 
+/**
+ * The token-lock build's files (one chunk for both networks, loaded by `loadLockSet`): exactly the manifest's lock
+ * files, each checked against its pinned SHA-256.
+ */
+async function loadLockChunk(): Promise<ArtifactChunk> {
+  const where = `${LOCK_ARTIFACT_GROUP} chunk`;
+  const files = ((await import('./generated/web/token-lock-v1.js')) as { default: unknown }).default;
+  if (files === null || typeof files !== 'object') throw new ArtifactIntegrityError(where, 'is not a file map');
+  const want = lockArtifactPaths();
+  if (JSON.stringify(Object.keys(files).sort()) !== JSON.stringify(want)) throw new ArtifactIntegrityError(where, `holds other files than the manifest's ${want.length} lock files`);
+  const encoder = new TextEncoder();
+  for (const [path, text] of Object.entries(files)) {
+    if (typeof text !== 'string') throw new ArtifactIntegrityError(path, 'is not text');
+    assertArtifactDigest(path, await sha256Of(encoder.encode(text)));
+  }
+  return files as ArtifactChunk;
+}
+
 function presetsOfBuild(build: string): string[] {
   const info = artifactManifest.builds[build];
   if (info === undefined) throw new ArtifactIntegrityError(build, 'is not a bundled build');
@@ -208,6 +227,8 @@ export function initWebWith(entry: WebEntry, network: KassealNetwork, options: I
     };
     const loaders: Record<string, () => Promise<ArtifactChunk>> = {};
     for (const p of presets) loaders[p] = () => loadPreset(p);
+    // The token-lock build serves both networks; it loads on first use (`loadLockSet`).
+    loaders[LOCK_ARTIFACT_GROUP] = loadLockChunk;
     registerLazyArtifacts(loaders);
     const pre: Record<string, string> = {};
     for (const b of builds) Object.assign(pre, await loadChunk(entry, b, 'base'));

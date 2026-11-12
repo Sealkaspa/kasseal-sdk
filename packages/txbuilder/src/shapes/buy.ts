@@ -8,6 +8,7 @@
  *   out1  rest    binding (1, T)          owner C, amount - n * lot, value = the supply cell's
  *   out2  user    binding (1, T)          owner buyer, n * lot, value V (default 5 KAS, refused below 0.1 KAS)
  *   out3  change
+ *   payload       the wallet partner tag (`partnerTag`, 6 bytes), else empty
  *
  * Borrowed receive is not a shape the
  * deployed curve accepts: `buy` requires `OpCovInputCount(T) == 1` (the
@@ -41,7 +42,7 @@ import { curveBuySigScript, kcc20Full } from '../sigscript.ts';
 import { ShapeNotSupported, type LaunchProofVerdict } from '../types.ts';
 import {
   DEFAULT_USER_CELL_VALUE, MIN_USER_CELL_VALUE, WITNESS_COVENANT, assertAllIn, checkTokenFamily, curveOwnedCellValue, feeFields, finish, requireActiveCurve, requireLineage, requireProofBound, requireSupplyCell,
-  type FeeOptions, type Shaped, requireOwnLineages,
+  type FeeOptions, type PartnerOptions, type Shaped, requireOwnLineages, tradePayload,
 } from './common.ts';
 import { launchPresetOf } from './create.ts';
 
@@ -54,7 +55,7 @@ export interface Buyer {
 }
 
 /** Inputs of `buildBuy`: the verified curve, its supply cell and the buyer's funding. */
-export interface BuyParams extends FeeOptions {
+export interface BuyParams extends FeeOptions, PartnerOptions {
   /** The network's builder context. */
   readonly ctx: BuilderContext;
   /** The curve cell. */
@@ -168,7 +169,7 @@ export function buildBuy(params: BuyParams): BuyResult {
     ],
     residual: changeTo(p2pkScript(buyer.address), 'change (buyer)'),
     genesisGroups: [],
-    payload: new Uint8Array(0),
+    payload: tradePayload(params.partnerTag),
     ...feeFields(params),
   };
   requireOwnLineages(plan, [curve.covenantId, T]);

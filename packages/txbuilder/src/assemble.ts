@@ -83,7 +83,7 @@ export type PoolCell = CellRef<'pool', PoolCellState>;
 export type AnyCell = TokenCell | CurveCell | PoolCell;
 
 /** Who signs an input: a P2PK key, or a token cell's owner as leader or delegator. */
-export type SignatureKind = 'p2pk' | 'token-leader' | 'token-delegator';
+export type SignatureKind = 'p2pk' | 'token-leader' | 'token-delegator' | 'lock-beneficiary';
 
 /** Where a signature goes and who must produce it. */
 export interface SignatureSlot {
@@ -119,8 +119,11 @@ export interface InputPlan {
   readonly sequence?: bigint;
 }
 
-/** The kind of a program input: the three token-launch lineages, or a companion contract's cell (not built by this SDK's public shapes). */
-export type InputCellKind = CellKind | 'vault' | 'deposit' | 'splitter' | 'order' | 'anchor' | 'dist-key';
+/**
+ * The kind of a program input: the three token-launch lineages, a token lock or its factory, or a companion contract's
+ * cell (not built by this SDK's public shapes).
+ */
+export type InputCellKind = CellKind | 'vault' | 'deposit' | 'splitter' | 'order' | 'anchor' | 'dist-key' | 'lock' | 'lock-factory';
 
 /** The largest input sequence a plan may carry: bits 32..63 clear (bit 63 would disable the relative lock). */
 export const MAX_INPUT_SEQUENCE = 0xffff_ffffn;
@@ -185,8 +188,15 @@ export interface TxPlan {
    * The transaction's lock time (default 0). A covenant with an absolute CLTV lock needs it set to that DAA score;
    * consensus then admits the transaction once the DAA score passes it. Must be
    * a DAA score (below 500,000,000,000), and only with every input's sequence non-final, which the builder's 0 is.
+   * A token-lock claim alone carries a timestamp instead (`lockTimeDomain`).
    */
   readonly lockTime?: bigint;
+  /**
+   * `timestamp`: the lock time is Unix milliseconds (at least 500,000,000,000), which consensus admits once the past
+   * median time is above it. Only a token-lock claim may use it (`shapes/lock.ts`): the plan must spend a lock cell and
+   * carry no signature slot, so no wallet ever signs a transaction with a timestamp lock time. Default `daa`.
+   */
+  readonly lockTimeDomain?: 'daa' | 'timestamp';
 }
 
 /** An output of an assembled transaction. */
@@ -243,7 +253,9 @@ export const MIN_CHANGE = 10_000_000n; // 0.1 KAS
 
 /** The mass model's view of a plan with the given residual value (undefined: no residual output). */
 export function shapeOf(plan: TxPlan, residualValue: bigint | undefined): TxShape {
-  const outputs = plan.outputs.map((o) => ({ value: o.value, spkLength: o.spk.length, hasCovenant: o.binding !== undefined || o.cell !== undefined }));
+  // A genesis group's member carries the binding `populateGenesisCovenants` writes, whether or not the plan predicts its cell.
+  const genesis = new Set(plan.genesisGroups.flatMap((g) => g.outputs));
+  const outputs = plan.outputs.map((o, i) => ({ value: o.value, spkLength: o.spk.length, hasCovenant: o.binding !== undefined || o.cell !== undefined || genesis.has(i) }));
   if (plan.residual && residualValue !== undefined && residualValue > 0n) {
     outputs.push({ value: residualValue, spkLength: plan.residual.spk.length, hasCovenant: plan.residual.binding !== undefined || plan.residual.cell !== undefined });
   }
@@ -256,6 +268,7 @@ export function shapeOf(plan: TxPlan, residualValue: bigint | undefined): TxShap
 
 /** The fee and residual value of a plan without building an SDK transaction. */
 export function estimate(plan: TxPlan): { fee: bigint; residualValue: bigint; masses: Masses } {
+  lockTimeOf(plan);
   const feerate = feerateOf(plan);
   const totalIn = plan.inputs.reduce((a, i) => a + i.amount, 0n);
   const fixedOut = plan.outputs.reduce((a, o) => a + o.value, 0n);
@@ -386,11 +399,27 @@ export function assemble(plan: TxPlan): AssembledTx {
 
 /** The largest lock time a plan may carry: a DAA score (timestamps start at 500,000,000,000). */
 export const MAX_LOCK_TIME_DAA = 499_999_999_999n;
+/** The smallest timestamp lock time (Unix ms): kaspa-txscript LOCK_TIME_THRESHOLD. */
+export const MIN_LOCK_TIME_TIMESTAMP = 500_000_000_000n;
+/** The largest timestamp lock time a plan may carry (the script integer range). */
+export const MAX_LOCK_TIME_TIMESTAMP = (1n << 63n) - 1n;
 
-/** A plan's lock time: 0 unless set; refused outside `0 .. MAX_LOCK_TIME_DAA`. */
+/**
+ * A plan's lock time: 0 unless set. A DAA score in `0 .. MAX_LOCK_TIME_DAA`, or, for a token-lock claim only
+ * (`lockTimeDomain: 'timestamp'`, a lock input, no signature slot), a timestamp in
+ * `MIN_LOCK_TIME_TIMESTAMP .. MAX_LOCK_TIME_TIMESTAMP`; anything else is refused.
+ */
 export function lockTimeOf(plan: TxPlan): bigint {
   const t = plan.lockTime ?? 0n;
-  if (typeof t !== 'bigint' || t < 0n || t > MAX_LOCK_TIME_DAA) throw new Error(`${plan.name}: lock time ${String(t)} is not a DAA score in 0..${MAX_LOCK_TIME_DAA}`);
+  if (typeof t !== 'bigint') throw new Error(`${plan.name}: lock time ${String(t)} is not a bigint`);
+  if ((plan.lockTimeDomain ?? 'daa') === 'daa') {
+    if (t < 0n || t > MAX_LOCK_TIME_DAA) throw new Error(`${plan.name}: lock time ${String(t)} is not a DAA score in 0..${MAX_LOCK_TIME_DAA}`);
+    return t;
+  }
+  if (plan.lockTimeDomain !== 'timestamp') throw new Error(`${plan.name}: unknown lock time domain ${String(plan.lockTimeDomain)}`);
+  if (!plan.inputs.some((i) => i.cellKind === 'lock')) throw new Error(`${plan.name}: a timestamp lock time is allowed for a token-lock claim only (no lock input)`);
+  if (plan.inputs.some((i) => i.signature !== undefined)) throw new Error(`${plan.name}: a timestamp lock time is allowed only in a transaction nobody signs (a lock claim)`);
+  if (t < MIN_LOCK_TIME_TIMESTAMP || t > MAX_LOCK_TIME_TIMESTAMP) throw new Error(`${plan.name}: lock time ${String(t)} is not a timestamp in ${MIN_LOCK_TIME_TIMESTAMP}..${MAX_LOCK_TIME_TIMESTAMP}`);
   return t;
 }
 

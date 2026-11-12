@@ -8,6 +8,7 @@
  *   out0  merged   binding (0, T)          owner C, supply + n * lot, value = the supply cell's
  *   out1  CURVE'   binding (2, C)          value = in - refund + fee
  *   out2  payout   P2PK(seller)            user cell value + refund - fee - tx fee, >= 0.0201 KAS
+ *   payload        the wallet partner tag (`partnerTag`, 6 bytes), else empty
  *
  * The deployed `sell(int n)` requires `OpCovOutputCount(T) == 1`: there is no
  * change record, so the leader cell must hold exactly `n * lot`. A holder
@@ -29,7 +30,7 @@ import { curveSellSigScript } from '../sigscript.ts';
 import { TokenAmountMismatch, type LaunchProofVerdict } from '../types.ts';
 import {
   MIN_PAYOUT, WITNESS_SIGNED, assertNetOut, checkTokenFamily, curveOwnedCellValue, feeFields, finish, fundingSum, requireActiveCurve, requireLineage, requireProofBound, requireSupplyCell, requireUserCell,
-  type FeeOptions, type Shaped, requireOwnLineages,
+  type FeeOptions, type PartnerOptions, type Shaped, requireOwnLineages, tradePayload,
 } from './common.ts';
 import { launchPresetOf } from './create.ts';
 
@@ -40,7 +41,7 @@ export interface Seller {
 }
 
 /** Inputs of `buildSell`: the verified curve, its supply cell and the seller's exact cell. */
-export interface SellParams extends FeeOptions {
+export interface SellParams extends FeeOptions, PartnerOptions {
   /** The network's builder context. */
   readonly ctx: BuilderContext;
   /** The curve cell. */
@@ -126,7 +127,7 @@ export function buildSell(params: SellParams): SellResult {
     ],
     residual: payoutTo(p2pkScript(seller.address), 'payout (seller)', MIN_PAYOUT),
     genesisGroups: [],
-    payload: new Uint8Array(0),
+    payload: tradePayload(params.partnerTag),
     ...feeFields(params),
   };
   requireOwnLineages(plan, [curve.covenantId, T]);

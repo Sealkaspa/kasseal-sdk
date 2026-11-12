@@ -110,7 +110,33 @@ creator and half to Kasseal's treasury. The two payout outputs of a sweep or gra
   ticker, no image). Please honour it.
 - Tickers are not unique. Key by covenant id.
 
-## 7. Limits
+## 7. Token locks
+
+A lock is lineage K: one P2SH cell running the lock program (`LOCK_H`
+`9f4eb229cfea334fafd15c05901ce20a8db0a59ba0932cbc7a3a1de079a70ac9`, its 140-byte state at offset 1 left out), plus
+the token cell it owns (a cell of the token's lineage T, owned by K under scheme `0x04`, created by the same
+transaction). One build serves both networks. `lockProgramKind(set, program)` recognises the lock and the factory
+(`FACTORY_H` `481065e01ee2f15fe06e7ce2b865857b073e18a6298e30a22551426c4c328f6b`) from a redeem script;
+`lockStateOfProgram` decodes the state.
+
+- **What is a lock.** K is a Kasseal lock exactly when output 0 of an accepted transaction X is K's genesis, authorised
+  by an input that spends a factory program (`LockFactory` around a 36-byte creator script) through its `create`
+  entry, and output 0 runs the lock program with the state of `create`'s arguments. The lock program alone also runs
+  for a K made without the factory, so nothing else is a lock. The factory makes the rest true on chain: a one-member
+  genesis, the exact token cell, no other covenant output in X.
+- **Who locked.** The locker is the factory's creator script (`lockFactoryCreatorOf`), never the token leader's owner.
+- **Amounts come from the state**, never from balances: K is not a holder. A cell of another lineage sent to K after
+  its creation can be taken by whoever submits the next claim.
+- **Transactions.** Prep (the creator's KAS to its factory address, change back), create (factory input 0, the
+  creator's token cells, the creator's KAS; out0 the lock, out1 the lock's token cell, then the creator's rest and
+  change), claim (inputs: the lock, its token cell; lock time = the claim time in Unix ms; no signature) and extend
+  (the beneficiary moves the schedule later, never past `endCap`). `checkLockCreateTx` and `checkLockClaimTx` re-derive
+  every figure of a create or a claim from its bytes.
+- **Kasseal's rules** (not the contract's) decide whether its indexer counts a lock as locked: at least 0.05 % of the
+  supply, the last release 7 days (10 minutes on testnet-10, and for now on mainnet too) to 2 years after the creation
+  block's time, no release due at creation. See the README's Token locks section.
+
+## 8. Limits
 
 Reads are free and unauthenticated: 60 requests per second per IP, 200 for the live state routes. Send no `Origin`
 header from a server. If you index from fixed server IPs and need more, contact Kasseal. The full API description is

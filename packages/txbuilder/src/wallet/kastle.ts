@@ -5,16 +5,18 @@
  * console (prefixed `[kastle]`) so a live test shows what the wallet really
  * does.
  *
- * Mapped methods, each a method of `window.kastle` (github.com/forbole/kastle
- * at 4f02273, release v2.61.0: docs/kastle-api.md, api/browser.ts and the
- * handlers under api/background/handlers/kaspa/):
+ * Mapped methods, each a method of `window.kastle` (github.com/forbole/kastle:
+ * release v2.61.4, the Chrome Web Store version on 2026-11-09, and main at
+ * 8c49bae; docs/kastle-api.md, api/browser.ts and the handlers under
+ * api/background/handlers/kaspa/):
  *
  *   connect()          -> true; opens the approval popup unless this origin is already connected
  *   getAccount()       -> { address, publicKey }; throws "Host not connected" before `connect` (no popup).
  *                         `publicKey` is `PublicKey.toString()`, a 33-byte compressed key (02/03 ‖ x);
  *                         a 32-byte x-only key is accepted too, and x must be the address's key
  *   getNetwork()       -> "mainnet" | "testnet-10" (Kastle's NetworkType); asserted
- *   getVersion()       -> e.g. "2.61.0+extension"; logged only (best effort)
+ *   switchNetwork(id)  -> the new network id; a confirm popup unless Kastle is on `id` already
+ *   getVersion()       -> e.g. "2.61.4+extension"; logged only (best effort)
  *   signTx(networkId, txJson, scripts)
  *                      -> the signed SafeJSON string (`deserializeFromSafeJSON`, signed,
  *                         `serializeToSafeJSON`); never broadcasts
@@ -38,9 +40,11 @@
  * sigscript at the offset the builder computed. No `scriptHex` is sent:
  * Kastle would append a push of it, which is not our sigscript layout.
  *
- * Kastle's open pull request #389 (KCC-20 support, not merged and in no
- * release as of v2.61.0) makes `signTx` refuse every dApp transaction whose
- * version is not 0 with `{ code: 4200, message }`; that answer surfaces as a
+ * Kastle's main branch (commit 2e554b1, PR #406, 2026-10-27; in no release
+ * yet, listed in the pending 2.62.0) makes `signTx` refuse every dApp
+ * transaction whose version is not 0 with `{ code: 4200, message }` before
+ * any popup (PR #389, which first carried the rule, was closed unmerged).
+ * Every Kasseal transaction is version 1, so that answer surfaces as a
  * `KastleError` with `covenantRefused` set. Ledger accounts in Kastle refuse
  * `scripts` and version 1 transactions outright.
  *
@@ -65,6 +69,7 @@ export interface KastleProvider {
   connect(): Promise<unknown>;
   getAccount(): Promise<unknown>;
   getNetwork(): Promise<unknown>;
+  switchNetwork?(networkId: string): Promise<unknown>;
   signTx(networkId: string, txJson: string, scripts?: readonly KastleScriptOption[]): Promise<unknown>;
   signMessage?(message: string): Promise<unknown>;
   getVersion?(): Promise<unknown>;
@@ -86,7 +91,7 @@ export interface KastleOptions {
 /** Kastle's networks (`NetworkType` in contexts/SettingsContext.tsx). */
 export const KASTLE_NETWORKS: readonly string[] = ['mainnet', 'testnet-10'];
 
-/** Kastle's error code for a method it does not support; PR #389 answers a covenant transaction with it. */
+/** Kastle's error code for a method it does not support; Kastle main (PR #406) answers a covenant transaction with it. */
 export const KASTLE_METHOD_NOT_SUPPORTED = 4200;
 
 /**
@@ -106,7 +111,7 @@ export class KastleError extends Error {
   get rejectedByUser(): boolean {
     return this.code === 4001;
   }
-  /** Kastle refused the transaction because it is a covenant (version 1) transaction (its PR #389 behaviour). */
+  /** Kastle refused the transaction because it is a covenant (version 1) transaction (Kastle main since PR #406). */
   get covenantRefused(): boolean {
     return this.method === 'signTx' && this.code === KASTLE_METHOD_NOT_SUPPORTED;
   }
@@ -199,6 +204,16 @@ export class KastleAdapter implements WalletAdapter {
       return null; // "Host not connected" (or locked): the user connects with a click
     }
     return this.#establish(provider);
+  }
+
+  /**
+   * Ask Kastle to switch to the adapter's network (`switchNetwork("testnet-10" | "mainnet")`: one confirm popup, none
+   * when it is already there). Throws `KastleError` 4200 when this Kastle has no `switchNetwork`.
+   */
+  async switchNetwork(): Promise<void> {
+    const provider = this.#requireProvider();
+    if (typeof provider.switchNetwork !== 'function') throw new KastleError('switchNetwork', KASTLE_METHOD_NOT_SUPPORTED, 'this Kastle has no switchNetwork');
+    await this.#call('switchNetwork', () => provider.switchNetwork!(this.network));
   }
 
   async #establish(provider: KastleProvider): Promise<WalletAccount> {

@@ -14,13 +14,16 @@ export {
   type KassealNetwork, type PublicTxBuilder, type TxBuilderOptions,
 } from './networks.ts';
 export {
-  ArtifactIntegrityError, SdkCompatibilityError, SdkIntegrityError, artifactManifest, artifactPathsOfBuild, kaspaSdkDigests, type ArtifactBuildInfo, type ArtifactManifest,
+  ArtifactIntegrityError, SdkCompatibilityError, SdkIntegrityError, artifactManifest, artifactPathsOfBuild, kaspaSdkDigests, lockArtifactPaths, type ArtifactBuildInfo, type ArtifactManifest,
+  type LockArtifactInfo,
 } from './integrity.ts';
 export { curveBasesOf, referenceTokenSuffix, verifyLaunchProofJson, type LaunchProofReport } from './proof.ts';
 export {
   PUBLIC_KASPA_API, compareGraduationWithChain, graduationOnChain, type GraduationOnChain, type GraduationOnChainOptions, type PublicApiTransaction,
 } from './graduation.ts';
-export { ApiError, HeadMoving, createApiSources, type ApiSourcesOptions } from './api.ts';
+export {
+  ApiError, CURVE_HEADS_MAX, HeadMoving, createApiSources, fetchCurveHeads, type ApiSourcesOptions, type CurveHeadsItem, type CurveHeadsOptions,
+} from './api.ts';
 
 /* ------------------------------------------------------------------ */
 /* Curve and pool maths                                                */
@@ -71,6 +74,7 @@ export * from '../../codec/src/number-rule.ts';
 export * from '../../codec/src/cell-state.ts';
 export * from '../../codec/src/kcc0023.ts';
 export * from '../../codec/src/display-text.ts';
+export * from '../../codec/src/partner-tag.ts';
 export { createDefaultRegistry } from '../../codec/src/index.ts';
 
 /* ------------------------------------------------------------------ */
@@ -153,6 +157,26 @@ export {
   BIND_LP_OUT, BIND_MAX_OUTS, BIND_POOL_OUT, LP_INVENTORY_CELL_VALUE, buildBindLp,
   type BindLpParams, type BindLpResult,
 } from '../../txbuilder/src/shapes/bind-lp.ts';
+
+/* ------------------------------------------------------------------ */
+/* Token locks: state, vesting, programs, create (prep + create), claim */
+/* ------------------------------------------------------------------ */
+
+export { LOCK_ARTIFACT_GROUP, loadLockSet, lockMinDurationMsOf, lockProgramKind, type LockProgramKind } from './locks.ts';
+export {
+  LOCK_DAY_MS, LOCK_FACTORY_CREATE_SIGNATURE, LOCK_FACTORY_STATE_LENGTH, LOCK_FEE_CAP, LOCK_FINAL_KAS_MIN, LOCK_FIVE_YEARS_MS, LOCK_MAX_CREATE_OUTPUTS, LOCK_MAX_DURATION_MS,
+  LOCK_MIN_DURATION_MS, LOCK_MIN_DURATION_MS_TESTNET, LOCK_MIN_SUPPLY_BPS, LOCK_OUT, LOCK_PAYOUT_CELL_KAS, LOCK_SCHEME_P2PK, LOCK_SCHEME_P2SH, LOCK_STATE_LENGTH, LOCK_TIME_THRESHOLD,
+  LOCK_TOTAL_MAX, LOCK_TRANCHES_MAX, LOCK_T_CELL_KAS_MIN, LOCK_V1_ARTIFACT_DIR, LOCK_VERSION, LockRuleViolation, assertLockAppRules, assertLockState, decodeLockState, encodeLockState,
+  loadLockV1, lockAmountAt, lockCellOf, lockClaimableAt, lockDeposit, lockDueAt, lockEndCapOf, lockEndOf, lockFactoryCreatorOf, lockFactoryProgram, lockGenesisState, lockNextUnlock,
+  lockPayeeScript, lockProgram, lockRemaining, lockSchedule, lockStateOfProgram, lockStateProblem, lockTokenCellProblem, lockV1ArtifactPaths, lockVestedAt,
+  type LockCell, type LockState, type LockTemplate, type LockTerms, type LockV1Set,
+} from '../../txbuilder/src/lock.ts';
+export {
+  LOCK_FACTORY_CELL_KAS, LOCK_FACTORY_CELL_KAS_MULTI, LOCK_FACTORY_CELL_MAX, LOCK_FACTORY_CELL_MIN, LOCK_PREP_FACTORIES_MAX, LockClaimNotDue, LockRefused, buildLockClaim, buildLockCreate,
+  buildLockPrep, checkLockClaimTx, checkLockCreateTx, lockBeneficiaryOf, lockCellTokenState, lockCreateSigScript, lockFactoryAddressOf, lockFactoryCellsOf, lockFactoryOf, lockPayoutState,
+  type LockBeneficiary, type LockClaimCheck, type LockClaimParams, type LockClaimResult,
+  type LockCreateCheck, type LockCreateParams, type LockCreateResult, type LockCreateRules, type LockFactoryCell, type LockFeeOptions, type LockPrepParams, type LockPrepResult,
+} from '../../txbuilder/src/shapes/lock.ts';
 
 /* ------------------------------------------------------------------ */
 /* Selection and planning                                              */

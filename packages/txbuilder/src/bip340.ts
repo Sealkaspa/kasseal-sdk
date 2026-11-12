@@ -72,6 +72,19 @@ function taggedHash(tag: string, ...parts: Uint8Array[]): Uint8Array {
   return sha(t, t, ...parts);
 }
 
+/**
+ * True when `x32` is a valid BIP-340 x-only public key: 32 bytes, x below the field size, and x on secp256k1 (lift_x
+ * succeeds). A key that fails this can never sign, so anything paid to it is frozen for good.
+ */
+export function isXOnlyPubkey(x32: Uint8Array): boolean {
+  if (x32.length !== 32) return false;
+  const x = big(x32);
+  if (x >= P) return false;
+  const c = mod(x ** 3n + 7n);
+  const y = pow(c, (P + 1n) / 4n);
+  return mod(y * y) === c;
+}
+
 /** BIP-340 verification of a 64-byte signature over a 32-byte message with a 32-byte x-only key; false on any malformed input. */
 export function schnorrVerify(pubkey32: Uint8Array, message32: Uint8Array, sig64: Uint8Array): boolean {
   if (pubkey32.length !== 32 || message32.length !== 32 || sig64.length !== 64) return false;

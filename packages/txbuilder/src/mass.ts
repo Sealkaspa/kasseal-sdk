@@ -351,6 +351,35 @@ export const BUDGETS_V1_COMPANION: Readonly<Record<BudgetRoleV1Companion, number
   splitterMerge: 1,
 });
 
+/** Input roles of the token-lock transactions (`packages/contracts/lock/v1`, `shapes/lock.ts`). */
+export type BudgetRoleLockV1 =
+  | 'factoryCreate' | 'factoryCreateRest' | 'leaderCreate1Out' | 'leaderCreate2Out' | 'leaderCreateDelegated' | 'delegatorCreate'
+  | 'lockClaim' | 'lockClaimFinal' | 'cellClaim' | 'cellClaimFinal' | 'lockExtend' | 'cellExtend' | 'p2pk';
+/**
+ * Budgets of the token-lock transactions, measured maximum plus one unit (the lock harness, `tests/budget.rs`; the
+ * README's mass table): creation with the exact amount, 1 T input: factory 13, signed leader 13; with the creator's
+ * rest: factory 17, leader 15; 3 T inputs with a rest: factory 17, leader 21, delegators 14 each; a claim: lock 15, its
+ * T cell 5; the final claim: lock 9, T cell 3; extend: lock 21, T cell 3; P2PK inputs 11. A creation with delegators and
+ * no rest, or with 2 T inputs, takes the 3-input row's leader and delegator budgets (the largest measured; the factory's
+ * depends only on the rest; a budget unit is 100 g).
+ */
+export const BUDGETS_LOCK_V1: Readonly<Record<BudgetRoleLockV1, number>> = Object.freeze({
+  factoryCreate: 13,
+  factoryCreateRest: 17,
+  leaderCreate1Out: 13,
+  leaderCreate2Out: 15,
+  leaderCreateDelegated: 21,
+  delegatorCreate: 14,
+  lockClaim: 15,
+  lockClaimFinal: 9,
+  cellClaim: 5,
+  cellClaimFinal: 3,
+  lockExtend: 21,
+  cellExtend: 3,
+  p2pk: 11,
+});
+
+
 /** The budget table of a contract set: `BUDGETS_V1` for v1. */
 export function budgetsFor(version: 'v1'): Readonly<Record<BudgetRole, number>> {
   if (version === 'v1') return BUDGETS_V1;

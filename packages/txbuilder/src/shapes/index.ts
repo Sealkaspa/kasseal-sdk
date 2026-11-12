@@ -14,3 +14,4 @@ export * from './graduate.ts';
 export * from './swap.ts';
 export * from './bind-lp.ts';
 export * from './liquidity.ts';
+export * from './lock.ts';

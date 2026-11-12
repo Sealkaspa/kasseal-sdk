@@ -18,7 +18,7 @@
  */
 
 import { poolLimitsOf, poolRoundingOf } from './cells.ts';
-import { templateHashOfProgram, toHex } from '@kasseal/codec';
+import { templateHashOfProgram, toHex, type PartnerTag } from '@kasseal/codec';
 import { BUILDER_CONTRACT_SETS, DEFAULT_CONTRACT_SET, hasOpenLiquidity, artifactSource, curvePresetDir, launchRevisionOf, presetsOfSet, v1RevisionsOn, type ContractSet } from './artifacts.ts';
 import { ResidualBelowMinimum, addressOfSpk, outpointKey, type AnyCell, type CurveCell, type FundingUtxo, type Outpoint, type PoolCell, type TokenCell } from './assemble.ts';
 import { contextSet, createContext, type BuilderContext } from './cells.ts';
@@ -60,6 +60,9 @@ import {
 const SELL_FEE_BOUND = SOMPI_PER_KAS / 20n;
 /** Funding allowance for a creation: two fees (tx01 + tx2, 0.0096 + 0.0239 KAS measured). */
 const CREATE_FEE_ALLOWANCE = SOMPI_PER_KAS / 10n;
+
+/** A trade's `partner` as the shapes' `partnerTag` (the payload), or nothing. */
+const partnerOf = (p: { readonly partner?: PartnerTag }): { partnerTag?: PartnerTag } => (p.partner === undefined ? {} : { partnerTag: p.partner });
 
 /** Options of `createTxBuilder`. */
 export interface TxBuilderOptions {
@@ -433,6 +436,7 @@ export function createTxBuilder(options: TxBuilderOptions): KassealTxBuilder {
       return toBuilt(buildBuy({
         ctx, curve, supply, buyer: { xOnlyPubkey: p.buyerXOnlyPubkey, address: p.buyer }, n: p.lots, proofVerdict: p.proofVerdict, funding, userCellValue: V, ...fee,
         ...(p.maxKasIn === undefined ? {} : { maxKasIn: p.maxKasIn }), ...(p.tokenId === undefined ? {} : { tokenId: p.tokenId }), ...(p.maxAllIn === undefined ? {} : { maxAllIn: p.maxAllIn }),
+        ...partnerOf(p),
       }));
     },
 
@@ -456,6 +460,7 @@ export function createTxBuilder(options: TxBuilderOptions): KassealTxBuilder {
       return toBuilt(buildSell({
         ctx, curve, supply, userCell: cell, seller: { address: p.seller }, n: p.lots, proofVerdict: p.proofVerdict, allowUnboundExit: exit, funding, ...fee, ...(p.expectedTokens === undefined ? {} : { expectedTokens: p.expectedTokens }),
         ...(p.minKasOut === undefined ? {} : { minKasOut: p.minKasOut }), ...(p.tokenId === undefined ? {} : { tokenId: p.tokenId }), ...(p.minNetOut === undefined ? {} : { minNetOut: p.minNetOut }),
+        ...partnerOf(p),
       }));
     },
 
@@ -472,6 +477,7 @@ export function createTxBuilder(options: TxBuilderOptions): KassealTxBuilder {
           ctx, pool, poolToken, buyer: { xOnlyPubkey: p.traderXOnlyPubkey, address: p.trader }, kasInScaled: p.amountIn, funding, userCellValue: V, ...fee, ...lineage,
           ...(p.deliverToScript === undefined ? {} : { deliverToScript: p.deliverToScript }),
           ...(p.minOut === undefined ? {} : { minTokensOut: p.minOut }), ...(p.maxAllIn === undefined ? {} : { maxAllIn: p.maxAllIn }),
+          ...partnerOf(p),
         }));
       }
       const cells = await userCellsOf(ctx, T, p.traderXOnlyPubkey);
@@ -487,6 +493,7 @@ export function createTxBuilder(options: TxBuilderOptions): KassealTxBuilder {
         ctx, pool, poolToken, userCell: cell, seller: { address: p.trader }, funding, ...fee, ...lineage,
         ...(extra === undefined ? {} : { extraUserCells: [extra] }),
         ...(p.minOut === undefined ? {} : { minOutScaled: p.minOut }), ...(p.minNetOut === undefined ? {} : { minNetOut: p.minNetOut }),
+        ...partnerOf(p),
       }));
     },
 
@@ -507,6 +514,7 @@ export function createTxBuilder(options: TxBuilderOptions): KassealTxBuilder {
       return toBuilt(buildSwapTokensForKas({
         ctx, pool, poolToken, userCell: cell, seller: { address: p.payout }, funding: [], ...fee, tokenId: T,
         scriptAuthority: { redeem: p.redeem, utxo: authority, signerXOnly: toHex(p.signerXOnly), ...(p.allowAnyScript === undefined ? {} : { allowAnyScript: p.allowAnyScript }) },
+        ...partnerOf(p),
       }));
     },
 

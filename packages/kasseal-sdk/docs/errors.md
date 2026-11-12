@@ -65,6 +65,14 @@ raised before anything is signed or submitted.
 | `FeerateOutOfRange` | `FEERATE_OUT_OF_RANGE` | The fee rate from the API is below the network minimum or above 20 times it: it is not used |
 | `FeeAboveCeiling` | `FEE_ABOVE_CEILING` | The computed fee would exceed the SDK's ceiling for the transaction: nothing is built |
 
+## Token locks
+
+| Class | `code` | Raised when |
+|---|---|---|
+| `LockRefused` | `LOCK_REFUSED` | A lock prep, create or claim (or its check, `checkLockCreateTx`, `checkLockClaimTx`) breaks a rule the lock contract pins or one of Kasseal's lock rules; `rule` names which (`app-rule`, `beneficiary`, `cells`, `funds`, `fee`, `time`, `lock-cell`, ...). Nothing is built, or, from a check, nothing should be signed or sent |
+| `LockClaimNotDue` | `LOCK_CLAIM_NOT_DUE` | A claim at `now` would pay nothing: `nextAt` is when the next release is due (a claim with a later lock time is rejected by the network, not held) |
+| `LockRuleViolation` | `LOCK_RULE` | `assertLockAppRules`: a lock's terms break one of Kasseal's lock rules (size, duration, releases, scheme, schedule); `rule` names which. The builders wrap it in `LockRefused` with `rule: 'app-rule'` |
+
 ## Signing, submission and retries
 
 | Class | `code` | Raised when |

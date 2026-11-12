@@ -94,6 +94,71 @@ const cellOf = <S>(w: CellWire, state: S, confirmed = w.confirmed): CovenantCell
   confirmed,
 });
 
+/** GET `base + path` as JSON; a 429 or 503 is waited out (its `retryAfterMs`, at most 30 s, plus jitter) up to `attempts` times. */
+async function getJson<T>(doFetch: typeof fetch, base: string, path: string, attempts: number): Promise<T> {
+  for (let i = 0; ; i++) {
+    const res = await doFetch(`${base}${path}`, { headers: { accept: 'application/json' } });
+    if (res.ok) return (await res.json()) as T;
+    const problem = (await res.json().catch(() => null)) as { retryAfterMs?: unknown } | null;
+    if ((res.status === 429 || res.status === 503) && i + 1 < attempts) {
+      const wait = typeof problem?.retryAfterMs === 'number' && problem.retryAfterMs >= 0 ? Math.min(problem.retryAfterMs, 30_000) : 1_000;
+      await sleep(wait + Math.floor(Math.random() * 250));
+      continue;
+    }
+    throw new ApiError(path, res.status, problem);
+  }
+}
+
+/** Options of `fetchCurveHeads`. */
+export interface CurveHeadsOptions {
+  /** The API base URL, for example `https://app.kasseal.com/v1` on mainnet. There is no default. */
+  readonly baseUrl: string;
+  /** Also read each head's supply and reserve cells (`cells=1`). */
+  readonly cells?: boolean;
+  /** For a token whose curve has graduated, read its pool's state instead of a 410 item (`pool=state`, default true). */
+  readonly pool?: boolean;
+  /** How many times a 429 or 503 answer is waited out and asked again (default 5). */
+  readonly attempts?: number;
+  /** The fetch to use (default: the global `fetch`). */
+  readonly fetch?: typeof fetch;
+}
+
+/** One token of `fetchCurveHeads`, as the API serves it (`GET /v1/tokens/heads`). */
+export interface CurveHeadsItem {
+  readonly id: string;
+  /** The body of `GET /v1/tokens/{id}/curve-head` while the token is bonding; check `head.headSpent` before building on it. */
+  readonly head?: Readonly<Record<string, unknown>>;
+  /** The token has graduated: its pool and the body of `GET /v1/pools/{poolId}`. */
+  readonly poolId?: string;
+  readonly pool?: Readonly<Record<string, unknown>>;
+  /** The token could not be served: 404 unknown, 410 graduated (without `pool`), 503 a head moving (read again after `retryAfterMs`). */
+  readonly error?: { readonly type: string; readonly title: string; readonly status: number; readonly detail?: string; readonly retryAfterMs?: number };
+}
+
+/** Ids per request (the API's limit). */
+export const CURVE_HEADS_MAX = 50;
+
+/**
+ * The curve heads (or, once graduated, pool states) of many tokens, in the order asked, `CURVE_HEADS_MAX` per request:
+ * one request in place of one per token, for routers, aggregators and portfolios. Nothing is cached by the API; each
+ * item is exactly what the single `curve-head` route serves.
+ */
+export async function fetchCurveHeads(options: CurveHeadsOptions, ids: readonly string[]): Promise<CurveHeadsItem[]> {
+  if (typeof options.baseUrl !== 'string' || !/^https?:\/\/[^/]/.test(options.baseUrl)) throw new TypeError('baseUrl must be an http(s) URL');
+  const list = [...new Set(ids.map((id) => id.toLowerCase()))];
+  if (list.some((id) => !/^[0-9a-f]{64}$/.test(id))) throw new TypeError('ids must be 64-character hex token ids');
+  const base = options.baseUrl.replace(/\/+$/, '');
+  const doFetch = options.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
+  const query = `${options.cells === true ? '&cells=1' : ''}${options.pool === false ? '' : '&pool=state'}`;
+  const out: CurveHeadsItem[] = [];
+  for (let k = 0; k < list.length; k += CURVE_HEADS_MAX) {
+    const chunk = list.slice(k, k + CURVE_HEADS_MAX);
+    const w = await getJson<{ items: CurveHeadsItem[] }>(doFetch, base, `/tokens/heads?ids=${chunk.join(',')}${query}`, options.attempts ?? 5);
+    out.push(...w.items);
+  }
+  return out;
+}
+
 /**
  * What the builder reads, from the public API. With `useTip`, a pool or curve read returns the end of the chain of
  * pending trades, so a trade goes out at once; if a pending link is dropped, the transaction built on it is refused
@@ -113,19 +178,7 @@ export function createApiSources(options: ApiSourcesOptions): UtxoSources & { la
   let curveTipSupply: CellWire | undefined;
   let funding: FundingUtxo[] = [];
 
-  async function get<T>(path: string): Promise<T> {
-    for (let i = 0; ; i++) {
-      const res = await doFetch(`${base}${path}`, { headers: { accept: 'application/json' } });
-      if (res.ok) return (await res.json()) as T;
-      const problem = (await res.json().catch(() => null)) as { retryAfterMs?: unknown } | null;
-      if ((res.status === 429 || res.status === 503) && i + 1 < attempts) {
-        const wait = typeof problem?.retryAfterMs === 'number' && problem.retryAfterMs >= 0 ? Math.min(problem.retryAfterMs, 30_000) : 1_000;
-        await sleep(wait + Math.floor(Math.random() * 250));
-        continue;
-      }
-      throw new ApiError(path, res.status, problem);
-    }
-  }
+  const get = <T>(path: string): Promise<T> => getJson<T>(doFetch, base, path, attempts);
 
   const ownerParam = (key: string): string => {
     if (key.startsWith('script:')) return key;

@@ -18,6 +18,16 @@
  *   failed to verify the signature script: script ran, but verification failed    script-failed (a require failed)
  *   failed to verify the signature script: false stack entry at end of script
  *     execution                                                                   script-failed (signature did not verify)
+ *   failed to verify the signature script: encountered invalid state while
+ *     running script: pick at an invalid location                                 script-failed (an argument shape the
+ *                                                                                 program does not take)
+ *   failed to verify the signature script: signature invalid: malformed
+ *     signature                                                                   script-failed (a signature over
+ *                                                                                 another assembly of the transaction)
+ *
+ * The last two are the rusty-kaspa formats `TxRuleError::SignatureInvalid` "failed to verify the signature script:
+ * {0}" over `TxScriptError::InvalidState` "encountered invalid state while running script: {0}" and
+ * `InvalidSignature` "signature invalid: {0}" (secp256k1 "malformed signature").
  *
  * Anything else, including a rejection that names another transaction than
  * the one submitted, is `failed` with the node's text as the reason. Among
@@ -56,7 +66,7 @@ const DUPLICATE = new RegExp(`^transaction ${ID} is already in the mempool$`);
 const ALREADY_ACCEPTED = new RegExp(`^transaction ${ID} was already accepted by the consensus$`);
 const BUDGET = /^failed to verify the signature script: script units exceeded the amount committed in the input: used=(\d+), limit=(\d+)$/;
 const FEE = new RegExp(`^(?:transaction ${ID} is not standard: )?transaction has (\\d+) fees which is under the required amount of (\\d+) for (compute|normalized transient|storage) mass (\\d+)(?: \\(proportional to transaction byte size\\))?$`);
-const SCRIPT_FAILED = /^failed to verify the signature script: (?:script ran, but verification failed|false stack entry at end of script execution)$/;
+const SCRIPT_FAILED = /^failed to verify the signature script: (?:script ran, but verification failed|false stack entry at end of script execution|encountered invalid state while running script: pick at an invalid location|signature invalid: malformed signature)$/;
 
 const BUCKET: Readonly<Record<string, 'compute' | 'transient' | 'storage'>> = { compute: 'compute', 'normalized transient': 'transient', storage: 'storage' };
 

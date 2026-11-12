@@ -1,6 +1,6 @@
 {
   "name": "@kassealhq/sdk",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Quotes, transaction builders, launch-proof verification and wallet adapters for Kasseal tokens on Kaspa.",
   "license": "MIT",
   "type": "module",
@@ -71,6 +71,7 @@
     "docs/errors.md",
     "docs/explorers.md",
     "docs/launch-proof.md",
+    "docs/partner-tag.md",
     "docs/trading-bots.md",
     "docs/wallets.md",
     "examples/"

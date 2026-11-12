@@ -70,7 +70,8 @@ export const ALLOW = [
   ['infrastructure env name', /^packages\/codec\/src\/protected-names\.ts$/, /^KASSEAL_RESERVED$/, 'a reserved-ticker list, not an environment variable'],
   ['private repo path', /^packages\/txbuilder\/src\/wallet\/message\.ts$/, /^apps\/b$/, 'a path in the public Kaspire wallet repository'],
   ['IPv4 address', /./, /^(127\.0\.0\.1|0\.0\.0\.0)$/, 'loopback in the Kaspa SDK'],
-  ['contract source', /(^|\/)(dist\/(artifacts\/contracts\/.*\.artifact\.json|chunks\/v1-kasseal-mainnet-[23][^/]*\.js)|packages\/contracts\/.*\.artifact\.json)$/, /^(Curve|Pool)\.sil$/, 'the compiler\'s source_path field inside a compiled artifact'],
+  ['contract source', /(^|\/)(dist\/(artifacts\/contracts\/.*\.artifact\.json|chunks\/v1-kasseal-mainnet-[23][^/]*\.js)|packages\/contracts\/.*\.artifact\.json)$/, /^(Curve|Pool|Lock|LockFactory)\.sil$/, 'the compiler\'s source_path field inside a compiled artifact'],
+  ['contract source', /(^|\/)(dist\/(artifacts\/contracts\/lock\/v1\/artifacts\/manifest\.json|chunks\/token-lock-v1-[^/]*\.js)|packages\/contracts\/lock\/v1\/artifacts\/manifest\.json)$/, /^(lock|factory|Lock|LockFactory)\.sil$/, 'the token-lock manifest\'s source digests and its artifacts\' source_path field (the sources themselves are not shipped)'],
   ['contract source', /^packages\/(codec|curve-math|txbuilder)\/src\//, /^(curve|pool|kcc20)\.sil$/, 'source comments naming the contract a constant or rule comes from'],
   ['contract source', /^packages\/kasseal-sdk\/scripts\/build\.mjs$/, /^\.sil$/, 'the build\'s guard that no source is bundled'],
   ['internal hostname', /./, /^(app|testnet)\.kasseal\.com$/i, 'the public app and API hosts (mainnet, testnet-10)'],
@@ -90,7 +91,7 @@ const EXEMPT = [
 ];
 
 /** Context the `.sil` allowance needs: only `"source_path": "sil/Curve.sil"` (or Pool), raw or JSON-escaped. */
-const SIL_CONTEXT = /source_path\\?"\s*:\s*\\?"sil\/(Curve|Pool)\.sil$/;
+const SIL_CONTEXT = /source_path\\?"\s*:\s*\\?"sil\/(Curve|Pool|Lock|LockFactory)\.sil$|\\?"file\\?"\s*:\s*\\?"lock\/v1\/(lock|factory)\.sil$/;
 
 /** Rules that only apply to the literals and comments of code (outside them a dash is subtraction). */
 const LITERAL_ONLY_IN_CODE = new Set(['audit or decision id']);
@@ -142,7 +143,7 @@ export function scanText(rel, text) {
       const m = { 0: m0[0], index: piece.start + m0.index };
       const hit = m[0];
       const allowed = ALLOW.some(([r, file, match]) => r === rule && file.test(rel) && match.test(hit));
-      if (allowed && rule === 'contract source' && /^(Curve|Pool)\.sil$/.test(hit)) {
+      if (allowed && rule === 'contract source' && /^(Curve|Pool|Lock|LockFactory|lock|factory)\.sil$/.test(hit)) {
         const around = text.slice(Math.max(0, m.index - 40), m.index + hit.length);
         if (SIL_CONTEXT.test(around)) continue;
       } else if (allowed) {

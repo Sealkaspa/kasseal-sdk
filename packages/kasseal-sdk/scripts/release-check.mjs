@@ -39,7 +39,7 @@ try {
   for (const r of checkParity(path.join(root, 'dist'))) console.log(`  ${r}`);
 
   step('tests');
-  const out = run(process.execPath, ['--test', ...['node', 'web', 'web-entries', 'web-chunks'].map((t) => path.join(PKG, 'test', `${t}.test.mjs`))], { cwd: PKG });
+  const out = run(process.execPath, ['--test', ...['node', 'web', 'web-entries', 'web-chunks', 'lock'].map((t) => path.join(PKG, 'test', `${t}.test.mjs`))], { cwd: PKG });
   const summary = out.split('\n').filter((l) => /^# (tests|pass|fail)/.test(l));
   for (const l of summary) console.log(`  ${l}`);
 

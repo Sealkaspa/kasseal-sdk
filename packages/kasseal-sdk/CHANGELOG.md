@@ -2,6 +2,63 @@
 
 All notable changes to `@kassealhq/sdk`. The versioning rules are in [STABILITY.md](STABILITY.md).
 
+## 1.0.0
+
+The first stable release: the public API is frozen under semantic versioning, as set out in
+[STABILITY.md](STABILITY.md).
+
+**Upgrading from 0.3.x**
+
+- Nothing breaks. Every 0.3.0 export is still exported with the same name, every 0.3.0 call keeps its parameters,
+  and a build without the new options produces the same transaction, byte for byte, as 0.3.0.
+- The string unions that describe a built transaction (`OutputRole`, `InputCellKind`, `SignatureKind`) have new
+  members. Code that switches over them exhaustively should keep a default branch.
+
+**Wallet partner tag**
+
+- Trade builds take an optional wallet partner tag: `partner: { partner, channel }` on `buildBuy`, `buildSell`,
+  `buildSwap` and `buildScriptSell`, and `partnerTag` on the synchronous shapes `buildBuy`, `buildSell`,
+  `buildSwapKasForTokens` and `buildSwapTokensForKas`. A wallet that embeds Kasseal trades in its own app passes its
+  partner id and channel 3 (`embedded`). See [docs/partner-tag.md](docs/partner-tag.md).
+- With a tag, the transaction's payload is the 6-byte tag (`4B 53 01`, partner id u16 big-endian, channel u8) and the
+  network fee covers its 6 bytes. Without one, the payload stays empty and every build is byte for byte as before.
+- New exports: `PARTNER_IDS`, `PARTNER_CHANNELS`, `encodePartnerTag`, `decodePartnerTag`, `decodePartnerTagHex`,
+  `isPartnerId`, `isPartnerChannel`, `tradePayload`, the format constants (`PARTNER_TAG_BYTES`, `PARTNER_TAG_VERSION`,
+  `PARTNER_TAG_MAGIC_0`, `PARTNER_TAG_MAGIC_1`) and the types `PartnerTag`, `PartnerId`, `PartnerChannel`, `PartnerKey`,
+  `PartnerChannelKey`, `PartnerOptions`.
+- Partners at release: KasWare (1), Kaspire (2), Kastle (3, reserved) and BraidSwap (1000, the first app partner;
+  its tag is `4B 53 01 03 E8 03`).
+- New guide for wallets, [docs/partner-tag.md](docs/partner-tag.md), and example `examples/partner-tag.ts`.
+- No change to the contract builds, their artifacts or any other builder.
+
+**Token locks**
+
+- The token-lock build is bundled: the lock program (`LOCK_H` `9f4eb229…0ac9`) and its factory (`FACTORY_H`
+  `481065e0…8f6b`), one build for mainnet and testnet-10, each file checked against its pinned SHA-256 at load
+  (`artifactManifest.lock`, `lockArtifactPaths`). The web entries load it as one chunk on first use.
+- Read and verify: `loadLockSet`, `lockProgramKind` (template-hash recognition, state left out), `decodeLockState`,
+  `encodeLockState`, `lockStateOfProgram`, `lockCellOf`, `lockTokenCellProblem`, `lockStateProblem`, and the
+  schedule: `lockVestedAt`, `lockClaimableAt`, `lockNextUnlock`, `lockSchedule`, `lockAmountAt`, `lockDueAt`,
+  `lockRemaining`, `lockEndOf`, `lockEndCapOf`, `lockDeposit`.
+- Create: `buildLockPrep` (the creator's factory cell) and `buildLockCreate` (the lock, its token cell, the creator's
+  rest), with `lockFactoryAddressOf` and `lockFactoryCellsOf` for factory cells an earlier prep left unspent. Claim:
+  `buildLockClaim` (anyone, no signature). Checks of a serialised create or claim: `checkLockCreateTx`,
+  `checkLockClaimTx`. The transactions are byte for byte the ones Kasseal's app builds.
+- Kasseal's lock rules (`assertLockAppRules`; at least 0.05 % of the supply, 7 days to 2 years, at most 100
+  releases, no back-dated schedule) apply in the builders; `lockMinDurationMsOf(network)` gives 7 days on mainnet and
+  10 minutes on testnet-10 for `minDurationMs`. The README separates them from what the contracts enforce.
+- New error codes: `LOCK_REFUSED` (`LockRefused`), `LOCK_CLAIM_NOT_DUE` (`LockClaimNotDue`), `LOCK_RULE`
+  (`LockRuleViolation`).
+- The type declarations no longer name output roles and input kinds of contracts the package does not ship.
+
+**Many heads in one request**
+
+- `fetchCurveHeads({ baseUrl, cells?, pool?, attempts?, fetch? }, ids)` reads the curve heads of many tokens through
+  `GET /v1/tokens/heads`, `CURVE_HEADS_MAX` (50) per request, in the order asked. A graduated token carries its pool's
+  state (`pool`, on by default) and a token that cannot be served its own `error`. A 429 or 503 is waited out as in
+  `createApiSources`. For routers, aggregators and portfolios that price many tokens: one request in place of one per
+  token. New exports: `fetchCurveHeads`, `CURVE_HEADS_MAX`, and the types `CurveHeadsOptions` and `CurveHeadsItem`.
+
 ## 0.3.0
 
 **The creator window (new contract builds)**

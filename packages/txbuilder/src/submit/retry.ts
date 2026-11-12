@@ -36,6 +36,13 @@ export interface RetryPolicyConfig {
   readonly backoffMaxMs: number;
   /** Silence after which a winner is assumed missed, or our own transaction's status is queried. */
   readonly silenceMs: number;
+  /**
+   * The first status query of a transaction the API just took (submitted, already in the mempool) comes this soon
+   * instead of after `silenceMs` (at most `silenceMs`); later ones keep `silenceMs`. Absent: `silenceMs` (as before).
+   * A transaction is usually accepted within about a second at 10 blocks per second, so an early query answers a quiet
+   * stream sooner (landing-phase1 C-P3).
+   */
+  readonly firstCheckMs?: number;
 }
 
 /** The default policy: 15 s budget, 120-200 ms back-off, 3 s silence. */
@@ -97,6 +104,7 @@ export class RetryPolicy {
 
   constructor(clock: Clock, random: Random = Math.random, config: RetryPolicyConfig = RETRY_POLICY) {
     if (!(config.backoffMinMs >= 0 && config.backoffMaxMs >= config.backoffMinMs && config.budgetMs > 0 && config.silenceMs > 0)) throw new RetryPolicyError('invalid retry policy configuration');
+    if (config.firstCheckMs !== undefined && !(config.firstCheckMs > 0 && config.firstCheckMs <= config.silenceMs)) throw new RetryPolicyError('invalid retry policy configuration');
     this.#clock = clock;
     this.#random = random;
     this.config = config;
@@ -171,7 +179,7 @@ export class RetryPolicy {
         return this.#giveUp('failed', state);
       case 'submitted':
       case 'already-in-mempool':
-        return this.#inFlight(state.txid, now, state);
+        return this.#inFlight(state.txid, now, state, this.config.firstCheckMs ?? this.config.silenceMs);
       case 'lost-race':
         if (state.cause === 'mempool-spent' && state.winnerTxid !== undefined) {
           if (now >= this.deadline) return this.#giveUp('busy', state);
@@ -234,9 +242,9 @@ export class RetryPolicy {
     return this.#reread(now, { kind: 'lost-race', txid, cause: 'orphan' });
   }
 
-  #inFlight(txid: string, now: number, state: SubmitState): RetryAction {
+  #inFlight(txid: string, now: number, state: SubmitState, waitMs = this.config.silenceMs): RetryAction {
     if (now >= this.deadline) return this.#giveUp('busy', state);
-    return this.#set({ kind: 'await-acceptance', txid, until: Math.min(now + this.config.silenceMs, this.deadline) });
+    return this.#set({ kind: 'await-acceptance', txid, until: Math.min(now + waitMs, this.deadline) });
   }
 
   #reread(at: number, state: SubmitState): RetryAction {

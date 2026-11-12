@@ -77,7 +77,8 @@ export function checkPackage(root, tarball) {
     if (!listed.has(f)) fail('manifest', `${f} is shipped but not listed`);
     const m = /\/artifacts\/([^/]+)\//.exec(f);
     if (m && !BUILDS.includes(m[1])) fail('manifest', `${f} belongs to another build`);
-    if (!/\.json$/.test(f)) fail('manifest', `${f} is not a compiled artifact`);
+    // The token-lock build's report is one of the files its own manifest pins (the builder hashes it on load).
+    if (!/\.json$/.test(f) && f !== `${manifest.lock.path}/build-report.txt`) fail('manifest', `${f} is not a compiled artifact`);
   }
   // Every web artifact chunk is one of the two builds.
   for (const f of files.filter((x) => x.startsWith('dist/chunks/v'))) {
@@ -97,10 +98,13 @@ export function checkPackage(root, tarball) {
       }
     }
     if (m.loadTokenTemplate().templateHash !== m.artifactManifest.tokenReference.templateHash) throw new Error('token template differs');
-    console.log(JSON.stringify({ verified: verified.length, contexts: n }));
+    const lock = await m.loadLockSet();
+    if (lock.lock.templateHash !== m.artifactManifest.lock.lockTemplateHash || lock.factory.templateHash !== m.artifactManifest.lock.factoryTemplateHash) throw new Error('lock template hashes differ');
+    console.log(JSON.stringify({ verified: verified.length, contexts: n, lockFiles: m.lockArtifactPaths().length }));
   `]);
   const d = JSON.parse(deep);
-  report.push(`manifest: ${BUILDS.join(' + ')} only, ${d.verified} files verified at load, ${d.contexts} curve templates and both pools recomputed to the manifest's hashes`);
+  if (d.lockFiles !== 6) fail('manifest', `${d.lockFiles} token-lock files, expected 6`);
+  report.push(`manifest: ${BUILDS.join(' + ')} and the token-lock build only, ${d.verified} files verified at load, ${d.contexts} curve templates, both pools, the lock and its factory recomputed to the manifest's hashes`);
 
   // Kaspa SDK files: the compiled-in digests and the vendored SHA256SUMS agree with the shipped bytes.
   const sums = new Map();
@@ -174,7 +178,7 @@ export function checkPackage(root, tarball) {
     import { initWeb as initMainnet, WEB_NETWORK, type InitWebOptions as MainnetOptions } from '@kassealhq/sdk/web/mainnet';
     import { initWeb as initTestnet } from '@kassealhq/sdk/web/testnet-10';
     import { initWeb as initLite, type InitWebOptions as LiteOptions, type KaspaSdkOption } from '@kassealhq/sdk/web-lite/mainnet';
-    import { errorCode, ProofNotBound, swapKasForTokens, maxWithSlippage, type KassealNetwork } from '@kassealhq/sdk';
+    import { errorCode, ProofNotBound, swapKasForTokens, maxWithSlippage, loadLockSet, buildLockCreate, buildLockClaim, lockClaimableAt, type KassealNetwork, type LockCreateParams, type LockClaimResult, type LockState, type LockV1Set } from '@kassealhq/sdk';
     const network: KassealNetwork = 'testnet-10';
     declare const sources: UtxoSources;
     const b = createTxBuilder({ networkId: network, sources });
@@ -187,7 +191,12 @@ export function checkPackage(root, tarball) {
     const kaspa: KaspaSdkOption = { module: kaspaModule, wasm: new Uint8Array(0), sha256: '00'.repeat(32) };
     const lo: LiteOptions = { kaspa, preload: ['standard'] };
     const withOwn: InitWebOptions = { network, kaspa };
-    void [p, code, o, initWeb, verifyArtifacts, errorCode, swapKasForTokens, maxWithSlippage, started, initLite(lo), withOwn];
+    const lockSet: Promise<LockV1Set> = loadLockSet();
+    declare const lockState: LockState;
+    const due: bigint = lockClaimableAt(lockState, 1_800_000_000_000n).amount;
+    const createWith = (q: LockCreateParams) => buildLockCreate(q).lockId;
+    const claimed = (r: LockClaimResult): boolean => r.final;
+    void [p, code, o, initWeb, verifyArtifacts, errorCode, swapKasForTokens, maxWithSlippage, started, initLite(lo), withOwn, lockSet, due, createWith, claimed, buildLockClaim];
   `);
   const tsc = path.join(PKG, 'node_modules', 'typescript', 'bin', 'tsc');
   try {
